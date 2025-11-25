@@ -14,8 +14,9 @@
     <Protobuf Include="*.proto" GrpcServices="Client" />
   </ItemGroup>
 
-  <Target Name="FixProto" BeforeTargets="Build">
+  <Target Name="FixProto" BeforeTargets="Protobuf_BeforeCompile">
     <Exec Command="dotnet run --file ..\protofix.cs" />
+
   </Target>
 
 </Project>

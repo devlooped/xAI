@@ -3,10 +3,10 @@ syntax = "proto3";
 package xai_api;
 
 import "google/protobuf/timestamp.proto";
-import "xai/api/v1/deferred.proto";
-import "xai/api/v1/image.proto";
-import "xai/api/v1/sample.proto";
-import "xai/api/v1/usage.proto";
+import "deferred.proto";
+import "image.proto";
+import "sample.proto";
+import "usage.proto";
 
 // An API that exposes our language models via a Chat interface.
 service Chat {

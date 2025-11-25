@@ -3,7 +3,7 @@ syntax = "proto3";
 package xai_api;
 
 import "google/protobuf/timestamp.proto";
-import "xai/api/v1/usage.proto";
+import "usage.proto";
 
 // An API service for sampling the responses of available language models.
 service Sample {

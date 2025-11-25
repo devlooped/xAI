@@ -2,8 +2,8 @@ syntax = "proto3";
 
 package xai_api;
 
-import "xai/api/v1/image.proto";
-import "xai/api/v1/usage.proto";
+import "image.proto";
+import "usage.proto";
 
 // An API service for interaction with available embedding models.
 service Embedder {
