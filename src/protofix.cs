@@ -4,6 +4,7 @@
 #:property ImportDirectoryBuildProps=false
 #:property ImportDirectoryBuildTargets=false
 #:property PublishAot=false
+#:property IsPackable=false
 
 using System.IO;
 using System.Linq;
