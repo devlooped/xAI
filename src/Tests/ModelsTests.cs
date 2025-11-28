@@ -16,7 +16,7 @@ public class ModelsTests(ITestOutputHelper output)
         var client = services.GetRequiredService<Models.ModelsClient>();
 
         var models = await client.ListLanguageModelsAsync();
-       
+
         Assert.NotNull(models);
 
         foreach (var model in models)
