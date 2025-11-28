@@ -1,6 +1,7 @@
 syntax = "proto3";
+option csharp_namespace = "Devlooped.Grok";
 
-package Devlooped.Grok;
+package xai_api;
 
 // The response from the service, when creating a deferred completion request.
 message StartDeferredResponse {

@@ -1,6 +1,7 @@
 syntax = "proto3";
+option csharp_namespace = "Devlooped.Grok";
 
-package Devlooped.Grok;
+package xai_api;
 
 // An API service to tokenize input prompts.
 service Tokenize {

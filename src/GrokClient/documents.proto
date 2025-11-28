@@ -1,6 +1,7 @@
 syntax = "proto3";
+option csharp_namespace = "Devlooped.Grok";
 
-package Devlooped.Grok;
+package xai_api;
 
 service Documents {
   rpc Search(SearchRequest) returns (SearchResponse) {}

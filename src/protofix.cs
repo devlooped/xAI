@@ -8,10 +8,16 @@
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading.Channels;
 using ConsoleAppFramework;
 using Spectre.Console;
 
 ConsoleApp.Run(args, FixProto);
+
+const string ns =
+    """
+    option csharp_namespace = "Devlooped.Grok";
+    """;
 
 /// <summary>Check and fix imports in .proto files.</summary>
 /// <para name="dir">Optional directory, defaults to current directory.</para>
@@ -23,17 +29,14 @@ static int FixProto(bool dryRun, [Argument] string? dir = default)
     foreach (var file in Directory.EnumerateFiles(dir, "*.proto", SearchOption.AllDirectories))
     {
         var lines = File.ReadAllLines(file).ToList();
-        var changed = false;
+        // Ensure we have the right C# namespace option set
+        var changed = lines.FindIndex(x => x.StartsWith("option csharp_namespace")) == -1;
+        if (changed)
+            lines.Insert(lines.FindIndex(x => x.StartsWith("syntax = ")) + 1, ns);
+
         for (var i = 0; i < lines.Count; i++)
         {
             var line = lines[i];
-            if (line == "package xai_api;")
-            {
-                lines[i] = "package Devlooped.Grok;";
-                changed = true;
-                continue; 
-            }
-
             if (regex.Match(line) is { Success: true } match)
             {
                 var path = match.Groups[1].Value;

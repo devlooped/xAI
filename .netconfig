@@ -180,3 +180,8 @@
 	sha = 407aa2d9319f5db12964540810b446fecc22d419
 	etag = 0dca55f20a72d3279554837f4eba867a1de37fe0f4a7535c2d9bc43867361cc5
 	weak
+[file "src/Tests/Attributes.cs"]
+	url = https://github.com/devlooped/catbag/blob/main/Xunit/Attributes.cs
+	sha = 40914971d4d6b42d6f8a90923b131136f7e609a5
+	etag = c77e7b435ce1df06fb60a3b0e15a0833d8e45d4d19f366c6184140ebb4814b1a
+	weak

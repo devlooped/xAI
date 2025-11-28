@@ -1,6 +1,7 @@
 syntax = "proto3";
+option csharp_namespace = "Devlooped.Grok";
 
-package Devlooped.Grok;
+package xai_api;
 
 // Records the cost associated with a sampling request (both chat and sample
 // endpoints).
