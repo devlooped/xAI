@@ -6,7 +6,7 @@
 [![Version](https://img.shields.io/nuget/vpre/Devlooped.GrokClient.svg?color=royalblue)](https://www.nuget.org/packages/Devlooped.GrokClient)
 [![Downloads](https://img.shields.io/nuget/dt/Devlooped.GrokClient.svg?color=green)](https://www.nuget.org/packages/Devlooped.GrokClient)
 
-A full XAI/Grok client based on the official full gRPC API.
+Grok client based on the official gRPC API reference from xAI
 
 <!-- include https://github.com/devlooped/.github/raw/main/osmf.md -->
 ## Open Source Maintenance Fee
@@ -23,6 +23,10 @@ OSMF tier. A single fee covers all of [Devlooped packages](https://www.nuget.org
 
 <!-- #content -->
 ## Usage
+
+This project provides a .NET client for the gRPC API of xAI with full support for all services 
+documented in the [official API reference](https://docs.x.ai/docs/grpc-reference) and 
+corresponding [proto files](https://github.com/xai-org/xai-proto/tree/main/proto/xai/api/v1).
 
 ```csharp
 var builder = Host.CreateApplicationBuilder(args); // or WebApplication.CreateBuilder(args);

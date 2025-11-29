@@ -2,7 +2,7 @@
 [![OSS](https://img.shields.io/github/license/devlooped/oss.svg?color=blue)](license.txt) 
 [![GitHub](https://img.shields.io/badge/-source-181717.svg?logo=GitHub)](https://github.com/devlooped/GrokClient)
 
-A full XAI/Grok client based on the official full gRPC API.
+Grok client based on the official gRPC API reference from xAI
 
 <!-- include https://github.com/devlooped/.github/raw/main/osmf.md -->
 <!-- include ../../readme.md#content -->

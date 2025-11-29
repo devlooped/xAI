@@ -5,7 +5,7 @@
     <RootNamespace>Devlooped.Grok</RootNamespace>
     <AssemblyName>Devlooped.Grok</AssemblyName>
     <PackageId>GrokClient</PackageId>
-    <Description>Grok gRPC client based on the official protocol buffers from xAI.</Description>
+    <Description>Grok client based on the official gRPC API reference from xAI.</Description>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <PackageTags>ai grok llm xai</PackageTags>
   </PropertyGroup>
