@@ -7,6 +7,7 @@
     <PackageId>GrokClient</PackageId>
     <Description>Grok gRPC client based on the official protocol buffers from xAI.</Description>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <PackageTags>ai grok llm xai</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>
