@@ -130,7 +130,6 @@ public class SanityChecks(ITestOutputHelper output)
                                 new Message
                                 {
                                     Role = MessageRole.RoleTool,
-                                    ToolCallId = toolCall.Id,
                                     Content = { new Content { Text = currentDate } }
                                 }
                             },
