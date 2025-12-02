@@ -127,8 +127,8 @@
 	weak
 [file "src/GrokClient/chat.proto"]
 	url = https://github.com/xai-org/xai-proto/blob/main/proto/xai/api/v1/chat.proto
-	sha = 230d00180161329075094e72593db408dd12f3bf
-	etag = 2b6a23b70c4df35423d139b9aa26f50d9ba8f7f334ffb9cb74dc28bdb5078dfe
+	sha = f2ee2fa88814da30260c0821362dd9cb60555980
+	etag = 86aeb20ee0a3bad2b9755541ddbfd11e082e7a9e0f8682b8cb3146a01adc74f9
 	weak
 [file "src/GrokClient/deferred.proto"]
 	url = https://github.com/xai-org/xai-proto/blob/main/proto/xai/api/v1/deferred.proto
