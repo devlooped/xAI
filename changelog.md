@@ -1,5 +1,13 @@
 # Changelog
 
+## [v1.0.2](https://github.com/devlooped/GrokClient/tree/v1.0.2) (2025-12-03)
+
+[Full Changelog](https://github.com/devlooped/GrokClient/compare/v1.0.1...v1.0.2)
+
+:sparkles: Implemented enhancements:
+
+- ⬆️ Add new include option for verbose chunks in streaming response [\#10](https://github.com/devlooped/GrokClient/pull/10) (@kzu)
+
 ## [v1.0.1](https://github.com/devlooped/GrokClient/tree/v1.0.1) (2025-12-02)
 
 [Full Changelog](https://github.com/devlooped/GrokClient/compare/v1.0.0...v1.0.1)
