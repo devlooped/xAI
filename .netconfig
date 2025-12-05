@@ -127,8 +127,8 @@
 	weak
 [file "src/GrokClient/chat.proto"]
 	url = https://github.com/xai-org/xai-proto/blob/main/proto/xai/api/v1/chat.proto
-	sha = 362749661fa2d340d234ad372fab920538897821
-	etag = 0e35007f9056fd101983a35614525773ea215eec9a8fa6707c2ec4866da5b7f8
+	sha = f6d4d709515fd666ebeb7dfcb89bd50e58c859d9
+	etag = a3ef7183a220c08fd57b7a197090a6a8e6e89028e0477184bf73e61b4b7da6ff
 	weak
 [file "src/GrokClient/deferred.proto"]
 	url = https://github.com/xai-org/xai-proto/blob/main/proto/xai/api/v1/deferred.proto
@@ -137,8 +137,8 @@
 	weak
 [file "src/GrokClient/documents.proto"]
 	url = https://github.com/xai-org/xai-proto/blob/main/proto/xai/api/v1/documents.proto
-	sha = 736b835b0c0dd93698664732daad49f87a2fbc6f
-	etag = 3719cf7bc6280bc244ec25290be31fc925c95d0833f5fe282d9d0be805827ec6
+	sha = f6d4d709515fd666ebeb7dfcb89bd50e58c859d9
+	etag = 4a8a0f386f19acd6818a04c0729c940a4943054938800e92a8b3973ceedc06f4
 	weak
 [file "src/GrokClient/embed.proto"]
 	url = https://github.com/xai-org/xai-proto/blob/main/proto/xai/api/v1/embed.proto
