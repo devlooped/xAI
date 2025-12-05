@@ -1,5 +1,13 @@
 # Changelog
 
+## [v1.1.0](https://github.com/devlooped/GrokClient/tree/v1.1.0) (2025-12-05)
+
+[Full Changelog](https://github.com/devlooped/GrokClient/compare/v1.0.3...v1.1.0)
+
+:sparkles: Implemented enhancements:
+
+- ⬆️ Add hybrid/semantic/keyword retrieval modes with reranker config [\#12](https://github.com/devlooped/GrokClient/pull/12) (@kzu)
+
 ## [v1.0.3](https://github.com/devlooped/GrokClient/tree/v1.0.3) (2025-12-04)
 
 [Full Changelog](https://github.com/devlooped/GrokClient/compare/v1.0.2...v1.0.3)
