@@ -1,5 +1,4 @@
 ﻿using System.Text.Json;
-using Grpc.Net.ClientFactory;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit.Abstractions;
 
@@ -49,7 +48,7 @@ public class SanityChecks(ITestOutputHelper output)
         // Create the request with both a local function and web_search tool
         var request = new GetCompletionsRequest
         {
-            Model = "grok-4-1-fast",
+            Model = "grok-4-1-fast-non-reasoning",
             Messages =
             {
                 new Message
@@ -67,100 +66,69 @@ public class SanityChecks(ITestOutputHelper output)
             {
                 new Tool { Function = getDateFunction },
                 new Tool { WebSearch = new WebSearch() }
-            }
+            },
+            Include = { IncludeOption.InlineCitations }
         };
 
         var response = await client.GetCompletionAsync(request);
 
         Assert.NotNull(response);
-        output.WriteLine($"Response ID: {response.Id}");
-        output.WriteLine($"Model: {response.Model}");
-
-        // Check if we have outputs
+        Assert.NotNull(response.Id);
+        Assert.NotEmpty(response.Id);
+        Assert.Equal(request.Model, response.Model);
         Assert.NotEmpty(response.Outputs);
+
         var firstOutput = response.Outputs[0];
-        var invokedGetDate = false;
+        Assert.NotEmpty(firstOutput.Message.ToolCalls);
 
-        output.WriteLine($"Finish Reason: {firstOutput.FinishReason}");
+        var getDateToolCall = firstOutput.Message.ToolCalls
+            .FirstOrDefault(tc => tc.Function?.Name == "get_date" && tc.Type == ToolCallType.ClientSideTool);
 
-        // The model should call tools
-        if (firstOutput.Message.ToolCalls.Count > 0)
+        Assert.NotNull(getDateToolCall);
+        Assert.NotNull(getDateToolCall.Id);
+        Assert.NotEmpty(getDateToolCall.Id);
+        Assert.Equal("get_date", getDateToolCall.Function.Name);
+
+        output.WriteLine($"Found client-side tool call: {getDateToolCall.Function.Name} (ID: {getDateToolCall.Id})");
+
+        var currentDate = DateTime.Now.ToString("yyyy-MM-dd");
+
+        var call = new Message
         {
-            output.WriteLine($"\nTool Calls ({firstOutput.Message.ToolCalls.Count}):");
+            Role = MessageRole.RoleAssistant,
+        };
+        call.ToolCalls.AddRange(firstOutput.Message.ToolCalls);
 
-            foreach (var toolCall in firstOutput.Message.ToolCalls)
+        var followUpRequest = new GetCompletionsRequest
+        {
+            Model = request.Model,
+            Messages =
             {
-                output.WriteLine($"  - ID: {toolCall.Id}");
-                output.WriteLine($"    Type: {toolCall.Type}");
-                output.WriteLine($"    Status: {toolCall.Status}");
-
-                if (toolCall.Function != null)
+                request.Messages[0],
+                call,
+                new Message
                 {
-                    output.WriteLine($"    Function: {toolCall.Function.Name}");
-                    output.WriteLine($"    Arguments: {toolCall.Function.Arguments}");
-
-                    // If it's our local get_date function, we need to execute it
-                    if (toolCall.Function.Name == "get_date" && toolCall.Type == ToolCallType.ClientSideTool)
-                    {
-                        output.WriteLine($"    -> Local function call detected, would execute on client side");
-
-                        // Execute the function
-                        var currentDate = DateTime.Now.ToString("yyyy-MM-dd");
-                        output.WriteLine($"    -> Result: {currentDate}");
-
-                        var call = new Message
-                        {
-                            Role = MessageRole.RoleAssistant,
-                        };
-                        call.ToolCalls.AddRange(firstOutput.Message.ToolCalls);
-
-                        // Continue the conversation with the function result
-                        var followUpRequest = new GetCompletionsRequest
-                        {
-                            Model = request.Model,
-                            Messages =
-                            {
-                                request.Messages[0], // Original user message
-                                call,
-                                //new Message
-                                //{
-                                //    Role = MessageRole.RoleAssistant,
-                                //    ToolCalls = { toolCall }
-                                //},
-                                new Message
-                                {
-                                    Role = MessageRole.RoleTool,
-                                    Content = { new Content { Text = currentDate } }
-                                }
-                            },
-                            Tools = { request.Tools[0], request.Tools[1] }
-                        };
-
-                        var followUpResponse = await client.GetCompletionAsync(followUpRequest);
-                        invokedGetDate = true;
-
-                        // There should be no more tool calls after we return the client-side one.
-                        Assert.Empty(followUpResponse.Outputs.SelectMany(x => x.Message.ToolCalls));
-                    }
+                    Role = MessageRole.RoleTool,
+                    Content = { new Content { Text = currentDate } }
                 }
-            }
-        }
+            },
+            Tools = { request.Tools },
+            Include = { IncludeOption.InlineCitations, IncludeOption.WebSearchCallOutput }
+        };
 
-        if (!string.IsNullOrEmpty(firstOutput.Message.Content))
-        {
-            output.WriteLine($"\nContent: {firstOutput.Message.Content}");
-        }
+        var followUpResponse = await client.GetCompletionAsync(followUpRequest);
 
-        // Check for citations
-        if (response.Citations.Count > 0)
-        {
-            output.WriteLine($"\nCitations ({response.Citations.Count}):");
-            foreach (var citation in response.Citations)
-            {
-                output.WriteLine($"  - {citation}");
-            }
-        }
+        Assert.NotNull(followUpResponse);
+        Assert.NotEmpty(followUpResponse.Outputs);
 
-        Assert.True(invokedGetDate);
+        var remainingClientToolCalls = followUpResponse.Outputs
+            .SelectMany(x => x.Message.ToolCalls)
+            .Where(tc => tc.Type == ToolCallType.ClientSideTool);
+
+        Assert.Empty(remainingClientToolCalls);
+
+        var finalOutput = followUpResponse.Outputs.Last();
+        Assert.NotNull(finalOutput.Message.Content);
+        Assert.NotEmpty(finalOutput.Message.Content);
     }
 }
