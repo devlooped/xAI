@@ -19,7 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\xAI\xAI.csproj" />
+    <ProjectReference Include="..\xAI.Protocol\xAI.Protocol.csproj" />
   </ItemGroup>
 
   <ItemGroup>
