@@ -2,9 +2,9 @@
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
-    <AssemblyName>xAI</AssemblyName>
-    <PackageId>xAI</PackageId>
-    <Description>xAI client based on the official gRPC API reference from xAI.</Description>
+    <AssemblyName>xAI.Protocol</AssemblyName>
+    <PackageId>xAI.Protocol</PackageId>
+    <Description>xAI gRPC protocol client based on the official API reference from xAI.</Description>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <PackageTags>xai ai grok llm</PackageTags>
     <PackageLicenseExpression></PackageLicenseExpression>
@@ -22,7 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.1" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.1" />
     <None Include="..\..\osmfeula.txt" Link="osmfeula.txt" PackagePath="OSMFEULA.txt" />
     <Protobuf Include="*.proto" GrpcServices="Client" />
   </ItemGroup>
