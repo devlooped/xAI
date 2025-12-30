@@ -1,14 +1,14 @@
 <Project>
 
   <PropertyGroup>
-    <Product>GrokClient</Product>
+    <Product>xAI SDK</Product>
     <ImplicitUsings>true</ImplicitUsings>
     <UserSecretsId>6eb457f9-16bc-49c5-81f2-33399b254e04</UserSecretsId>
 
     <RestoreSources>https://api.nuget.org/v3/index.json;https://pkg.kzu.app/index.json</RestoreSources>
-    <PackageProjectUrl>https://github.com/devlooped/GrokClient</PackageProjectUrl>
+    <PackageProjectUrl>https://github.com/devlooped/xAI</PackageProjectUrl>
 
-    <SuppressNETCoreSdkPreviewMessage>false</SuppressNETCoreSdkPreviewMessage>
+    <SuppressNETCoreSdkPreviewMessage>true</SuppressNETCoreSdkPreviewMessage>
   </PropertyGroup>
 
 </Project>
