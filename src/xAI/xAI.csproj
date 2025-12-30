@@ -2,12 +2,11 @@
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
-    <RootNamespace>Devlooped.Grok</RootNamespace>
-    <AssemblyName>Devlooped.Grok</AssemblyName>
-    <PackageId>GrokClient</PackageId>
-    <Description>Grok client based on the official gRPC API reference from xAI.</Description>
+    <AssemblyName>xAI</AssemblyName>
+    <PackageId>xAI</PackageId>
+    <Description>xAI client based on the official gRPC API reference from xAI.</Description>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <PackageTags>ai grok llm xai</PackageTags>
+    <PackageTags>xai ai grok llm</PackageTags>
     <PackageLicenseExpression></PackageLicenseExpression>
     <PackageLicenseFile>OSMFEULA.txt</PackageLicenseFile>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
@@ -19,10 +18,7 @@
     <PackageReference Include="Grpc.Net.ClientFactory" Version="2.71.0" />
     <PackageReference Include="Grpc.Tools" Version="2.76.0" PrivateAssets="all" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.1" />
-    <PackageReference Include="NuGetizer" Version="1.4.6">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
+    <PackageReference Include="NuGetizer" Version="1.4.6" PrivateAssets="all"/>
   </ItemGroup>
 
   <ItemGroup>

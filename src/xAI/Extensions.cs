@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel;
 using Google.Protobuf.WellKnownTypes;
 
-namespace Devlooped.Grok;
+namespace xAI.Protocol;
 
 /// <summary>
 /// Usability extensions for Grok gRPC clients.

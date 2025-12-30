@@ -1,12 +1,12 @@
-![Icon](assets/icon.png) Grok Client (gRPC)
+![Icon](assets/icon.png) xAI .NET SDK
 ============
 
-[![Version](https://img.shields.io/nuget/vpre/GrokClient.svg?color=royalblue)](https://www.nuget.org/packages/GrokClient)
-[![Downloads](https://img.shields.io/nuget/dt/GrokClient.svg?color=darkmagenta)](https://www.nuget.org/packages/GrokClient)
+[![Version](https://img.shields.io/nuget/vpre/xAI.svg?color=royalblue)](https://www.nuget.org/packages/xAI)
+[![Downloads](https://img.shields.io/nuget/dt/xAI.svg?color=darkmagenta)](https://www.nuget.org/packages/xAI)
 [![EULA](https://img.shields.io/badge/EULA-OSMF-blue?labelColor=black&color=C9FF30)](osmfeula.txt)
 [![OSS](https://img.shields.io/github/license/devlooped/oss.svg?color=blue)](license.txt) 
 
-Grok client based on the official gRPC API reference from xAI
+xAI .NET SDK based on the official gRPC API reference from xAI
 
 <!-- include https://github.com/devlooped/.github/raw/main/osmf.md -->
 ## Open Source Maintenance Fee

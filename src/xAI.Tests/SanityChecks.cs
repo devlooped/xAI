@@ -1,8 +1,9 @@
 ﻿using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
+using xAI.Protocol;
 using Xunit.Abstractions;
 
-namespace Devlooped.Grok;
+namespace xAI.Tests;
 
 public class SanityChecks(ITestOutputHelper output)
 {

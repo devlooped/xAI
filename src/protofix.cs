@@ -17,7 +17,7 @@ ConsoleApp.Run(args, FixProto);
 
 const string ns =
     """
-    option csharp_namespace = "Devlooped.Grok";
+    option csharp_namespace = "xAI.Protocol";
     """;
 
 /// <summary>Check and fix imports in .proto files.</summary>

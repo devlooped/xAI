@@ -19,7 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\GrokClient\GrokClient.csproj" />
+    <ProjectReference Include="..\xAI\xAI.csproj" />
   </ItemGroup>
 
   <ItemGroup>

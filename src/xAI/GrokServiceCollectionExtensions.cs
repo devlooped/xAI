@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel;
-using Devlooped.Grok;
 using Grpc.Net.ClientFactory;
+using xAI.Protocol;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
