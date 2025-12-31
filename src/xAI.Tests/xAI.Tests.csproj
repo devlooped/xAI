@@ -5,25 +5,49 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
+    <NoWarn>MEAI001;xAI001;$(NoWarn)</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="coverlet.collector" Version="6.0.4" />
-    <PackageReference Include="DotNetEnv" Version="3.1.1" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="10.0.1" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="10.0.1" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.1" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
+    <PackageReference Include="Devlooped.Extensions.AI" Version="1.0.0" />
+    <PackageReference Include="Moq" Version="4.20.72" />
     <PackageReference Include="xunit" Version="2.9.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
+
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="10.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="10.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Options" Version="10.0.1" />
+
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Http.Resilience" Version="10.1.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.1" />
+    
+    <PackageReference Include="DotNetEnv" Version="3.1.1" />
+
+    <PackageReference Include="Devlooped.Extensions.AI.Grok" Version="1.0.0" IncludeAssets="none" />
+    <PackageReference Include="GrokClient" Version="1.1.0" IncludeAssets="none" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\xAI\xAI.csproj" />
     <ProjectReference Include="..\xAI.Protocol\xAI.Protocol.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <Using Include="Xunit" />
+    <Using Include="Xunit.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update=".env" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="Content\**\*.*" CopyToOutputDirectory="PreserveNewest" />
+    <Content Update="Content\**\*.*" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="*.json;*.ini;*.toml" Exclude="@(Content)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

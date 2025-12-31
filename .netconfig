@@ -180,7 +180,7 @@
 	sha = 407aa2d9319f5db12964540810b446fecc22d419
 	etag = 0dca55f20a72d3279554837f4eba867a1de37fe0f4a7535c2d9bc43867361cc5
 	weak
-[file "src/Tests/Attributes.cs"]
+[file "src/xAI.Tests/Extensions/Attributes.cs"]
 	url = https://github.com/devlooped/catbag/blob/main/Xunit/Attributes.cs
 	sha = 40914971d4d6b42d6f8a90923b131136f7e609a5
 	etag = c77e7b435ce1df06fb60a3b0e15a0833d8e45d4d19f366c6184140ebb4814b1a
@@ -189,4 +189,9 @@
 	url = https://github.com/devlooped/.github/blob/main/osmfeula.txt
 	sha = 666a2a7c315f72199c418f11482a950fc69a8901
 	etag = 91ea15c07bfd784036c6ca931f5b2df7e9767b8367146d96c79caef09d63899f
+	weak
+[file "src/xAI/Extensions/Throw.cs"]
+	url = https://github.com/devlooped/catbag/blob/main/System/Throw.cs
+	sha = 3012d56be7554c483e5c5d277144c063969cada9
+	etag = 43c81c6c6dcdf5baee40a9e3edc5e871e473e6c954c901b82bb87a3a48888ea0
 	weak

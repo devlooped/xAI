@@ -1,0 +1,32 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+    <AssemblyName>xAI</AssemblyName>
+    <PackageId>xAI</PackageId>
+    <Description>xAI/Grok integration for Microsoft.Extensions.AI</Description>
+    <PackageLicenseExpression></PackageLicenseExpression>
+    <PackageLicenseFile>OSMFEULA.txt</PackageLicenseFile>
+    <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+    <NoWarn>MEAI001;xAI001;$(NoWarn)</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NuGetizer" Version="1.4.6" PrivateAssets="all" />
+    <PackageReference Include="Google.Protobuf" Version="3.33.2" />
+    <PackageReference Include="Grpc.Net.Client" Version="2.76.0" />
+    <PackageReference Include="Microsoft.Extensions.AI.Abstractions" Version="10.1.1" />
+    <PackageReference Include="System.ClientModel" Version="1.8.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\osmfeula.txt" Link="osmfeula.txt" PackagePath="OSMFEULA.txt" />
+    <InternalsVisibleTo Include="xAI.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\xAI.Protocol\xAI.Protocol.csproj" />
+  </ItemGroup>
+
+</Project>

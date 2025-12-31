@@ -1,4 +1,4 @@
-![Icon](assets/icon.png) xAI .NET SDK
+![Icon](assets/icon.png) .NET SDK
 ============
 
 [![Version](https://img.shields.io/nuget/vpre/xAI.svg?color=royalblue)](https://www.nuget.org/packages/xAI)
@@ -6,7 +6,8 @@
 [![EULA](https://img.shields.io/badge/EULA-OSMF-blue?labelColor=black&color=C9FF30)](osmfeula.txt)
 [![OSS](https://img.shields.io/github/license/devlooped/oss.svg?color=blue)](license.txt) 
 
-xAI .NET SDK based on the official gRPC API reference from xAI
+xAI .NET SDK based on the official gRPC API reference from xAI with integration for 
+Microsoft.Extensions.AI and Microsoft.Agents.AI.
 
 <!-- include https://github.com/devlooped/.github/raw/main/osmf.md -->
 ## Open Source Maintenance Fee
@@ -21,10 +22,188 @@ OSMF tier. A single fee covers all of [Devlooped packages](https://www.nuget.org
 
 <!-- https://github.com/devlooped/.github/raw/main/osmf.md -->
 
-<!-- #content -->
+<!-- #xai -->
+xAI/Grok integration for Microsoft.Extensions.AI `IChatClient` with full support for all 
+[agentic tools](https://docs.x.ai/docs/guides/tools/overview):
+
+```csharp
+var grok = new GrokClient(Environment.GetEnvironmentVariable("XAI_API_KEY")!)
+    .AsIChatClient("grok-4.1-fast");
+```
+## Web Search
+
+```csharp
+var messages = new Chat()
+{
+    { "system", "You are an AI assistant that knows how to search the web." },
+    { "user", "What's Tesla stock worth today? Search X and the news for latest info." },
+};
+
+var grok = new GrokClient(Environment.GetEnvironmentVariable("XAI_API_KEY")!).AsIChatClient("grok-4.1-fast");
+
+var options = new ChatOptions
+{
+    Tools = [new HostedWebSearchTool()] // 👈 compatible with OpenAI
+};
+
+var response = await grok.GetResponseAsync(messages, options);
+```
+
+In addition to basic web search as shown above, Grok supports more 
+[advanced search](https://docs.x.ai/docs/guides/tools/search-tools) scenarios, 
+which can be opted-in by using Grok-specific types:
+
+```csharp
+var grok = new GrokChatClient(Environment.GetEnvironmentVariable("XAI_API_KEY")!)
+    .AsIChatClient("grok-4.1-fast");
+var response = await grok.GetResponseAsync(
+    "What are the latest product news by Tesla?", 
+    new ChatOptions
+    {
+        Tools = [new GrokSearchTool()
+        {
+            AllowedDomains = [ "ir.tesla.com" ]
+        }]
+    });
+```
+
+You can alternatively set `ExcludedDomains` instead, and enable image 
+understanding with `EnableImageUndestanding`. Learn more about these filters 
+at [web search parameters](https://docs.x.ai/docs/guides/tools/search-tools#web-search-parameters).
+
+## X Search
+
+In addition to web search, Grok also supports searching on X (formerly Twitter):
+
+```csharp
+var response = await grok.GetResponseAsync(
+    "What's the latest on Optimus?", 
+    new ChatOptions
+    {
+        Tools = [new GrokXSearchTool
+        {
+            // AllowedHandles = [...],
+            // ExcludedHandles = [...],
+            // EnableImageUnderstanding = true,
+            // EnableVideoUnderstanding = true,
+            // FromDate = ...,
+            // ToDate = ...,
+        }]
+    });
+```
+
+Learn more about available filters at [X search parameters](https://docs.x.ai/docs/guides/tools/search-tools#x-search-parameters).
+
+You can combine both web and X search in the same request by adding both tools.
+
+## Code Execution
+
+The code execution tool enables Grok to write and execute Python code in real-time, 
+dramatically expanding its capabilities beyond text generation. This powerful feature 
+allows Grok to perform precise calculations, complex data analysis, statistical 
+computations, and solve mathematical problems that would be impossible through text alone.
+
+This is Grok's equivalent of the OpenAI code interpreter, and is configured the same way:
+
+```csharp
+var grok = new GrokClient(Configuration["XAI_API_KEY"]!).AsIChatClient("grok-4-fast");
+var response = await grok.GetResponseAsync(
+    "Calculate the compound interest for $10,000 at 5% annually for 10 years",
+    new ChatOptions
+    {
+        Tools = [new HostedCodeInterpreterTool()]
+    });
+
+var text = response.Text;
+Assert.Contains("$6,288.95", text);
+```
+
+If you want to access the output from the code execution, you can add that as an 
+include in the options:
+
+```csharp
+var grok = new GrokClient(Configuration["XAI_API_KEY"]!).AsIChatClient("grok-4-fast");
+var options = new GrokChatOptions
+{
+    Include = { IncludeOption.CodeExecutionCallOutput },
+    Tools = [new HostedCodeInterpreterTool()]
+};
+
+var response = await grok.GetResponseAsync(
+    "Calculate the compound interest for $10,000 at 5% annually for 10 years",
+    options);
+
+var content = response.Messages
+    .SelectMany(x => x.Contents)
+    .OfType<CodeInterpreterToolResultContent>()
+    .First();
+
+foreach (AIContent output in content.Outputs)
+    // process outputs from code interpreter
+```
+
+Learn more about the [code execution tool](https://docs.x.ai/docs/guides/tools/code-execution-tool).
+
+## Collection Search
+
+If you maintain a [collection](https://docs.x.ai/docs/key-information/collections), 
+Grok can perform semantic search on it:
+
+```csharp
+var options = new ChatOptions
+{
+    Tools = [new HostedFileSearchTool {
+        Inputs = [new HostedVectorStoreContent("[collection_id]")]
+    }]
+};
+```
+
+Learn more about [collection search](https://docs.x.ai/docs/guides/tools/collections-search-tool).
+
+## Remote MCP
+
+Remote MCP Tools allow Grok to connect to external MCP (Model Context Protocol) servers.
+This example sets up the GitHub MCP server so queries about releases (limited specifically 
+in this case): 
+
+```csharp
+var options = new ChatOptions
+{
+    Tools = [new HostedMcpServerTool("GitHub", "https://api.githubcopilot.com/mcp/") {
+        AuthorizationToken = Configuration["GITHUB_TOKEN"]!,
+        AllowedTools = ["list_releases"],
+    }]
+};
+```
+
+Just like with code execution, you can opt-in to surfacing the MCP outputs in 
+the response:
+
+```csharp
+var options = new GrokChatOptions
+{
+    // Exposes McpServerToolResultContent in responses
+    Include = { IncludeOption.McpCallOutput },
+    Tools = [new HostedMcpServerTool("GitHub", "https://api.githubcopilot.com/mcp/") {
+        AuthorizationToken = Configuration["GITHUB_TOKEN"]!,
+        AllowedTools = ["list_releases"],
+    }]
+};
+
+```
+
+Learn more about [Remote MCP tools](https://docs.x.ai/docs/guides/tools/remote-mcp-tools).
+<!-- #xai -->
+
+# xAI.Protocol
+
+[![Version](https://img.shields.io/nuget/vpre/xAI.Protocol.svg?color=royalblue)](https://www.nuget.org/packages/xAI.Protocol)
+[![Downloads](https://img.shields.io/nuget/dt/xAI.Protocol.svg?color=green)](https://www.nuget.org/packages/xAI.Protocol)
+
+<!-- #protocol -->
 ## Usage
 
-This project provides a .NET client for the gRPC API of xAI with full support for all services 
+The xAI.Protocol package provides a .NET client for the gRPC API of xAI with full support for all services 
 documented in the [official API reference](https://docs.x.ai/docs/grpc-reference) and 
 corresponding [proto files](https://github.com/xai-org/xai-proto/tree/main/proto/xai/api/v1).
 
@@ -54,7 +233,7 @@ ensuring it remains up-to-date with any changes or additions made to the API as 
 
 See for example the [introduction of tool output and citations](https://github.com/devlooped/GrokClient/pull/3).
 
-<!-- #content -->
+<!-- #protocol -->
 
 <!-- include https://github.com/devlooped/sponsors/raw/main/footer.md -->
 # Sponsors 

@@ -1,4 +1,5 @@
 <Solution>
   <Project Path="src/xAI.Protocol/xAI.Protocol.csproj" />
   <Project Path="src/xAI.Tests/xAI.Tests.csproj" Id="c22563af-5b36-4100-9f31-93629b7bb17c" />
+  <Project Path="src/xAI/xAI.csproj" />
 </Solution>
