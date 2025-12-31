@@ -328,82 +328,8 @@ class GrokChatClient : IChatClient
 
         if (options?.Tools is not null)
         {
-            foreach (var tool in options.Tools)
-            {
-                if (tool is AIFunction functionTool)
-                {
-                    var function = new Function
-                    {
-                        Name = functionTool.Name,
-                        Description = functionTool.Description,
-                        Parameters = JsonSerializer.Serialize(functionTool.JsonSchema)
-                    };
-                    request.Tools.Add(new Tool { Function = function });
-                }
-                else if (tool is HostedWebSearchTool webSearchTool)
-                {
-                    if (webSearchTool is GrokXSearchTool xSearch)
-                    {
-                        var toolProto = new XSearch
-                        {
-                            EnableImageUnderstanding = xSearch.EnableImageUnderstanding,
-                            EnableVideoUnderstanding = xSearch.EnableVideoUnderstanding,
-                        };
-
-                        if (xSearch.AllowedHandles is { } allowed) toolProto.AllowedXHandles.AddRange(allowed);
-                        if (xSearch.ExcludedHandles is { } excluded) toolProto.ExcludedXHandles.AddRange(excluded);
-                        if (xSearch.FromDate is { } from) toolProto.FromDate = Google.Protobuf.WellKnownTypes.Timestamp.FromDateTimeOffset(from.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc));
-                        if (xSearch.ToDate is { } to) toolProto.ToDate = Google.Protobuf.WellKnownTypes.Timestamp.FromDateTimeOffset(to.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc));
-
-                        request.Tools.Add(new Tool { XSearch = toolProto });
-                    }
-                    else if (webSearchTool is GrokSearchTool grokSearch)
-                    {
-                        var toolProto = new WebSearch
-                        {
-                            EnableImageUnderstanding = grokSearch.EnableImageUnderstanding,
-                        };
-
-                        if (grokSearch.AllowedDomains is { } allowed) toolProto.AllowedDomains.AddRange(allowed);
-                        if (grokSearch.ExcludedDomains is { } excluded) toolProto.ExcludedDomains.AddRange(excluded);
-
-                        request.Tools.Add(new Tool { WebSearch = toolProto });
-                    }
-                    else
-                    {
-                        request.Tools.Add(new Tool { WebSearch = new WebSearch() });
-                    }
-                }
-                else if (tool is HostedCodeInterpreterTool)
-                {
-                    request.Tools.Add(new Tool { CodeExecution = new CodeExecution { } });
-                }
-                else if (tool is HostedFileSearchTool fileSearch)
-                {
-                    var toolProto = new CollectionsSearch();
-
-                    if (fileSearch.Inputs?.OfType<HostedVectorStoreContent>() is { } vectorStores)
-                        toolProto.CollectionIds.AddRange(vectorStores.Select(x => x.VectorStoreId).Distinct());
-
-                    if (fileSearch.MaximumResultCount is { } maxResults)
-                        toolProto.Limit = maxResults;
-
-                    request.Tools.Add(new Tool { CollectionsSearch = toolProto });
-                }
-                else if (tool is HostedMcpServerTool mcpTool)
-                {
-                    request.Tools.Add(new Tool
-                    {
-                        Mcp = new MCP
-                        {
-                            Authorization = mcpTool.AuthorizationToken,
-                            ServerLabel = mcpTool.ServerName,
-                            ServerUrl = mcpTool.ServerAddress,
-                            AllowedToolNames = { mcpTool.AllowedTools ?? Array.Empty<string>() }
-                        }
-                    });
-                }
-            }
+            foreach (var tool in options.Tools.Select(x => x.AsProtocolTool(options)))
+                if (tool is not null) request.Tools.Add(tool);
         }
 
         if (options?.ResponseFormat is ChatResponseFormatJson)
