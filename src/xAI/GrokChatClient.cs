@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Google.Protobuf;
 using Grpc.Core;
 using Grpc.Net.Client;
 using Microsoft.Extensions.AI;
@@ -39,72 +40,7 @@ class GrokChatClient : IChatClient
         var response = await client.GetCompletionAsync(request, cancellationToken: cancellationToken);
         var lastOutput = response.Outputs.OrderByDescending(x => x.Index).FirstOrDefault();
 
-        if (lastOutput == null)
-        {
-            return new ChatResponse()
-            {
-                ResponseId = response.Id,
-                ModelId = response.Model,
-                CreatedAt = response.Created.ToDateTimeOffset(),
-                Usage = MapToUsage(response.Usage),
-            };
-        }
-
-        var message = new ChatMessage(MapRole(lastOutput.Message.Role), default(string));
-        var citations = response.Citations?.Distinct().Select(MapCitation).ToList<AIAnnotation>();
-
-        foreach (var output in response.Outputs.OrderBy(x => x.Index))
-        {
-            if (output.Message.Content is { Length: > 0 } text)
-            {
-                // Special-case output from tools
-                if (output.Message.Role == MessageRole.RoleTool &&
-                    output.Message.ToolCalls.Count == 1 &&
-                        output.Message.ToolCalls[0] is { } toolCall)
-                {
-                    if (toolCall.Type == ToolCallType.McpTool)
-                    {
-                        message.Contents.Add(new McpServerToolCallContent(toolCall.Id, toolCall.Function.Name, null)
-                        {
-                            RawRepresentation = toolCall
-                        });
-                        message.Contents.Add(new McpServerToolResultContent(toolCall.Id)
-                        {
-                            RawRepresentation = toolCall,
-                            Output = [new TextContent(text)]
-                        });
-                        continue;
-                    }
-                    else if (toolCall.Type == ToolCallType.CodeExecutionTool)
-                    {
-                        message.Contents.Add(new CodeInterpreterToolCallContent()
-                        {
-                            CallId = toolCall.Id,
-                            RawRepresentation = toolCall
-                        });
-                        message.Contents.Add(new CodeInterpreterToolResultContent()
-                        {
-                            CallId = toolCall.Id,
-                            RawRepresentation = toolCall,
-                            Outputs = [new TextContent(text)]
-                        });
-                        continue;
-                    }
-                }
-
-                var content = new TextContent(text) { Annotations = citations };
-
-                foreach (var citation in output.Message.Citations)
-                    (content.Annotations ??= []).Add(MapInlineCitation(citation));
-
-                message.Contents.Add(content);
-            }
-
-            foreach (var toolCall in output.Message.ToolCalls)
-                message.Contents.Add(MapToolCall(toolCall));
-        }
-
-        return new ChatResponse(message)
+        var result = new ChatResponse()
         {
             ResponseId = response.Id,
             ModelId = response.Model,
@@ -112,9 +48,15 @@ class GrokChatClient : IChatClient
             FinishReason = lastOutput != null ? MapFinishReason(lastOutput.FinishReason) : null,
             Usage = MapToUsage(response.Usage),
         };
+
+        var citations = response.Citations?.Distinct().Select(MapCitation).ToList<AIAnnotation>();
+
+        ((List<ChatMessage>)result.Messages).AddRange(response.Outputs.AsChatMessages(citations));
+
+        return result;
     }
 
-    AIContent MapToolCall(ToolCall toolCall) => toolCall.Type switch
+    AIContent? MapToolCall(ToolCall toolCall) => toolCall.Type switch
     {
         ToolCallType.ClientSideTool => new FunctionCallContent(
             toolCall.Id,
@@ -134,11 +76,12 @@ class GrokChatClient : IChatClient
             CallId = toolCall.Id,
             RawRepresentation = toolCall
         },
-        _ => new HostedToolCallContent()
+        ToolCallType.CollectionsSearchTool => new CollectionSearchToolCallContent()
         {
             CallId = toolCall.Id,
             RawRepresentation = toolCall
-        }
+        },
+        _ => null
     };
 
     public IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(IEnumerable<ChatMessage> messages, ChatOptions? options = null, CancellationToken cancellationToken = default)
@@ -161,10 +104,12 @@ class GrokChatClient : IChatClient
                     ResponseId = chunk.Id,
                     ModelId = chunk.Model,
                     CreatedAt = chunk.Created?.ToDateTimeOffset(),
+                    RawRepresentation = chunk,
                     FinishReason = output.FinishReason != FinishReason.ReasonInvalid ? MapFinishReason(output.FinishReason) : null,
                 };
 
-                if (chunk.Citations is { Count: > 0 } citations)
+                var citations = chunk.Citations?.Distinct().Select(MapCitation).ToList<AIAnnotation>();
+                if (citations?.Count > 0)
                 {
                     var textContent = update.Contents.OfType<TextContent>().FirstOrDefault();
                     if (textContent == null)
@@ -172,32 +117,16 @@ class GrokChatClient : IChatClient
                         textContent = new TextContent(string.Empty);
                         update.Contents.Add(textContent);
                     }
-
-                    foreach (var citation in citations.Distinct())
-                        (textContent.Annotations ??= []).Add(MapCitation(citation));
+                    ((List<AIAnnotation>)(textContent.Annotations ??= [])).AddRange(citations);
                 }
 
-                foreach (var toolCall in output.Delta.ToolCalls)
-                    update.Contents.Add(MapToolCall(toolCall));
+                ((List<AIContent>)update.Contents).AddRange(output.Delta.ToolCalls.AsContents(text, citations));
 
                 if (update.Contents.Any())
                     yield return update;
             }
         }
     }
-
-    static CitationAnnotation MapInlineCitation(InlineCitation citation) => citation.CitationCase switch
-    {
-        InlineCitation.CitationOneofCase.WebCitation => new CitationAnnotation { Url = new(citation.WebCitation.Url) },
-        InlineCitation.CitationOneofCase.XCitation => new CitationAnnotation { Url = new(citation.XCitation.Url) },
-        InlineCitation.CitationOneofCase.CollectionsCitation => new CitationAnnotation
-        {
-            FileId = citation.CollectionsCitation.FileId,
-            Snippet = citation.CollectionsCitation.ChunkContent,
-            ToolName = "file_search",
-        },
-        _ => new CitationAnnotation()
-    };
 
     static CitationAnnotation MapCitation(string citation)
     {
@@ -210,12 +139,13 @@ class GrokChatClient : IChatClient
         var file = url.AbsolutePath[7..];
         return new CitationAnnotation
         {
-            ToolName = "collections_search",
-            FileId = file,
             AdditionalProperties = new AdditionalPropertiesDictionary
-                {
-                    { "collection_id", collection }
-                }
+            {
+                { "collection_id", collection }
+            },
+            FileId = file,
+            ToolName = "collections_search",
+            Url = new Uri($"collections://{collection}/files/{file}"),
         };
     }
 
