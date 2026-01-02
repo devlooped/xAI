@@ -1,52 +1,74 @@
 # Changelog
 
-## [v1.1.0](https://github.com/devlooped/GrokClient/tree/v1.1.0) (2025-12-05)
+## [v1.0.0-preview.1](https://github.com/devlooped/xAI/tree/v1.0.0-preview.1) (2026-01-02)
 
-[Full Changelog](https://github.com/devlooped/GrokClient/compare/v1.0.3...v1.1.0)
-
-:sparkles: Implemented enhancements:
-
-- ⬆️ Add hybrid/semantic/keyword retrieval modes with reranker config [\#12](https://github.com/devlooped/GrokClient/pull/12) (@kzu)
-
-## [v1.0.3](https://github.com/devlooped/GrokClient/tree/v1.0.3) (2025-12-04)
-
-[Full Changelog](https://github.com/devlooped/GrokClient/compare/v1.0.2...v1.0.3)
+[Full Changelog](https://github.com/devlooped/xAI/compare/v1.1.0...v1.0.0-preview.1)
 
 :sparkles: Implemented enhancements:
 
-- ⬆️ Rename server-side document search tools to attachment search [\#11](https://github.com/devlooped/GrokClient/pull/11) (@kzu)
+- Add support for collection search results citations [\#35](https://github.com/devlooped/xAI/pull/35) (@kzu)
+- Make client disposable so it clears Grpc clients [\#34](https://github.com/devlooped/xAI/pull/34) (@kzu)
+- Rename extension method to add xAI protocol clients [\#32](https://github.com/devlooped/xAI/pull/32) (@kzu)
+- Improve tool conversion and make API public [\#31](https://github.com/devlooped/xAI/pull/31) (@kzu)
+- Bring in M.E.AI integration from Devlooped.Extensions.AI [\#30](https://github.com/devlooped/xAI/pull/30) (@kzu)
+- Rename xAI project to xAI.Protocol [\#27](https://github.com/devlooped/xAI/pull/27) (@kzu)
+- Rename to xAI [\#25](https://github.com/devlooped/xAI/pull/25) (@kzu)
 
-## [v1.0.2](https://github.com/devlooped/GrokClient/tree/v1.0.2) (2025-12-03)
+:twisted_rightwards_arrows: Merged:
 
-[Full Changelog](https://github.com/devlooped/GrokClient/compare/v1.0.1...v1.0.2)
+- Fix protocol package id [\#28](https://github.com/devlooped/xAI/pull/28) (@kzu)
+
+## [v1.1.0](https://github.com/devlooped/xAI/tree/v1.1.0) (2025-12-05)
+
+[Full Changelog](https://github.com/devlooped/xAI/compare/v1.0.3...v1.1.0)
 
 :sparkles: Implemented enhancements:
 
-- ⬆️ Add new include option for verbose chunks in streaming response [\#10](https://github.com/devlooped/GrokClient/pull/10) (@kzu)
+- ⬆️ Add hybrid/semantic/keyword retrieval modes with reranker config [\#12](https://github.com/devlooped/xAI/pull/12) (@kzu)
 
-## [v1.0.1](https://github.com/devlooped/GrokClient/tree/v1.0.1) (2025-12-02)
+## [v1.0.3](https://github.com/devlooped/xAI/tree/v1.0.3) (2025-12-04)
 
-[Full Changelog](https://github.com/devlooped/GrokClient/compare/v1.0.0...v1.0.1)
+[Full Changelog](https://github.com/devlooped/xAI/compare/v1.0.2...v1.0.3)
 
 :sparkles: Implemented enhancements:
 
-- ⬆️ Add end\_index for InlineCitation [\#9](https://github.com/devlooped/GrokClient/pull/9) (@kzu)
+- ⬆️ Rename server-side document search tools to attachment search [\#11](https://github.com/devlooped/xAI/pull/11) (@kzu)
 
-## [v1.0.0](https://github.com/devlooped/GrokClient/tree/v1.0.0) (2025-11-29)
+## [v1.0.2](https://github.com/devlooped/xAI/tree/v1.0.2) (2025-12-03)
 
-[Full Changelog](https://github.com/devlooped/GrokClient/compare/v1.0.0-rc...v1.0.0)
+[Full Changelog](https://github.com/devlooped/xAI/compare/v1.0.1...v1.0.2)
 
-## [v1.0.0-rc](https://github.com/devlooped/GrokClient/tree/v1.0.0-rc) (2025-11-29)
+:sparkles: Implemented enhancements:
 
-[Full Changelog](https://github.com/devlooped/GrokClient/compare/v1.0.0-beta...v1.0.0-rc)
+- ⬆️ Add new include option for verbose chunks in streaming response [\#10](https://github.com/devlooped/xAI/pull/10) (@kzu)
 
-## [v1.0.0-beta](https://github.com/devlooped/GrokClient/tree/v1.0.0-beta) (2025-11-29)
+## [v1.0.1](https://github.com/devlooped/xAI/tree/v1.0.1) (2025-12-02)
 
-[Full Changelog](https://github.com/devlooped/GrokClient/compare/v1.0.0-alpha...v1.0.0-beta)
+[Full Changelog](https://github.com/devlooped/xAI/compare/v1.0.0...v1.0.1)
 
-## [v1.0.0-alpha](https://github.com/devlooped/GrokClient/tree/v1.0.0-alpha) (2025-11-29)
+:sparkles: Implemented enhancements:
 
-[Full Changelog](https://github.com/devlooped/GrokClient/compare/2d9b3b880caca8f90bb994bc6e5d679dee26197d...v1.0.0-alpha)
+- ⬆️ Add end\_index for InlineCitation [\#9](https://github.com/devlooped/xAI/pull/9) (@kzu)
+
+## [v1.0.0](https://github.com/devlooped/xAI/tree/v1.0.0) (2025-11-29)
+
+[Full Changelog](https://github.com/devlooped/xAI/compare/v1.0.0-rc...v1.0.0)
+
+## [v1.0.0-rc](https://github.com/devlooped/xAI/tree/v1.0.0-rc) (2025-11-29)
+
+[Full Changelog](https://github.com/devlooped/xAI/compare/v1.0.0-beta...v1.0.0-rc)
+
+## [v1.0.0-beta](https://github.com/devlooped/xAI/tree/v1.0.0-beta) (2025-11-29)
+
+[Full Changelog](https://github.com/devlooped/xAI/compare/v1.0.0-alpha...v1.0.0-beta)
+
+## [v1.0.0-alpha](https://github.com/devlooped/xAI/tree/v1.0.0-alpha) (2025-11-29)
+
+[Full Changelog](https://github.com/devlooped/xAI/compare/v0.1.0...v1.0.0-alpha)
+
+## [v0.1.0](https://github.com/devlooped/xAI/tree/v0.1.0) (2025-11-25)
+
+[Full Changelog](https://github.com/devlooped/xAI/compare/2d9b3b880caca8f90bb994bc6e5d679dee26197d...v0.1.0)
 
 
 
