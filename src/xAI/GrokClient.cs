@@ -7,9 +7,9 @@ namespace xAI;
 /// <summary>Client for interacting with the Grok service.</summary>
 /// <param name="apiKey">The API key used for authentication.</param>
 /// <param name="options">The options used to configure the client.</param>
-public class GrokClient(string apiKey, GrokClientOptions options)
+public sealed class GrokClient(string apiKey, GrokClientOptions options) : IDisposable
 {
-    static ConcurrentDictionary<(Uri, string), GrpcChannel> channels = [];
+    static readonly ConcurrentDictionary<(Uri, string), GrpcChannel> channels = [];
 
     /// <summary>Initializes a new instance of the <see cref="GrokClient"/> class with default options.</summary>
     public GrokClient(string apiKey) : this(apiKey, new GrokClientOptions()) { }
@@ -35,6 +35,9 @@ public class GrokClient(string apiKey, GrokClientOptions options)
 
         return GrpcChannel.ForAddress(Endpoint, options);
     });
+
+    /// <summary>Clears the cached list of gRPC channels in the client.</summary>
+    public void Dispose() => channels.Clear();
 
     class AuthenticationHeaderHandler(string apiKey) : DelegatingHandler
     {
