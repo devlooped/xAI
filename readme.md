@@ -1,10 +1,22 @@
-![Icon](assets/icon.png) .NET SDK
-============
+<div align="center">
+  <img src="assets/xai.png" alt="xAI Logo" width="100" />
+  <h1>xAI .NET SDK</h1>
+  <p>The unofficial .NET SDK for xAI's APIs</p>
+  <a href="https://www.nuget.org/packages/xAI">
+    <img src="https://img.shields.io/nuget/vpre/xAI.svg?color=royalblue" alt="NuGet Version" />
+  </a>
+  <a href="https://www.nuget.org/packages/xAI">
+    <img src="https://img.shields.io/nuget/dt/xAI.svg?color=darkmagenta" alt="NuGet Downloads" />
+  </a>
+  <a href="osmfeula.txt">
+    <img src="https://img.shields.io/badge/EULA-OSMF-blue?labelColor=black&color=C9FF30" alt="EULA" />
+  </a>
+  <a href="license.txt">
+    <img src="https://img.shields.io/github/license/devlooped/oss.svg?color=blue" alt="License" />
+  </a>
+</div>
 
-[![Version](https://img.shields.io/nuget/vpre/xAI.svg?color=royalblue)](https://www.nuget.org/packages/xAI)
-[![Downloads](https://img.shields.io/nuget/dt/xAI.svg?color=darkmagenta)](https://www.nuget.org/packages/xAI)
-[![EULA](https://img.shields.io/badge/EULA-OSMF-blue?labelColor=black&color=C9FF30)](osmfeula.txt)
-[![OSS](https://img.shields.io/github/license/devlooped/oss.svg?color=blue)](license.txt) 
+<br>
 
 xAI .NET SDK based on the official gRPC API reference from xAI with integration for 
 Microsoft.Extensions.AI and Microsoft.Agents.AI.
@@ -22,6 +34,7 @@ OSMF tier. A single fee covers all of [Devlooped packages](https://www.nuget.org
 
 <!-- https://github.com/devlooped/.github/raw/main/osmf.md -->
 
+## Usage
 <!-- #xai -->
 xAI/Grok integration for Microsoft.Extensions.AI `IChatClient` with full support for all 
 [agentic tools](https://docs.x.ai/docs/guides/tools/overview):
