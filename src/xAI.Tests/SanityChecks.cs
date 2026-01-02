@@ -11,7 +11,7 @@ public class SanityChecks(ITestOutputHelper output)
     public async Task ListModelsAsync()
     {
         var services = new ServiceCollection()
-            .AddGrokClient(Environment.GetEnvironmentVariable("XAI_API_KEY")!)
+            .AddxAIProtocol(Environment.GetEnvironmentVariable("XAI_API_KEY")!)
             .BuildServiceProvider();
 
         var client = services.GetRequiredService<Models.ModelsClient>();
@@ -28,7 +28,7 @@ public class SanityChecks(ITestOutputHelper output)
     public async Task ExecuteLocalFunctionWithWebSearch()
     {
         var services = new ServiceCollection()
-            .AddGrokClient(Environment.GetEnvironmentVariable("XAI_API_KEY")!)
+            .AddxAIProtocol(Environment.GetEnvironmentVariable("XAI_API_KEY")!)
             .BuildServiceProvider();
 
         var client = services.GetRequiredService<Chat.ChatClient>();

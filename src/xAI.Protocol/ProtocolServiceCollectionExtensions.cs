@@ -4,19 +4,18 @@ using xAI.Protocol;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
-/// <summary>Registration extensions for Grok gRPC clients.</summary>
+/// <summary>Registration extensions for xAI gRPC clients.</summary>
 [EditorBrowsable(EditorBrowsableState.Never)]
-public static class GrokServiceCollectionExtensions
+public static class ProtocolServiceCollectionExtensions
 {
     /// <summary>
-    /// Registers Grok gRPC clients with the specified API key.
+    /// Registers xAI gRPC protocol clients with the specified API key.
     /// </summary>
-    public static IServiceCollection AddGrokClient(this IServiceCollection services, string apiKey,
+    public static IServiceCollection AddxAIProtocol(this IServiceCollection services, string apiKey,
         Action<GrpcClientFactoryOptions>? configureClient = null,
         Action<IHttpClientBuilder>? configureHttp = null)
     {
         var address = new Uri("https://api.x.ai/");
-
         var builder = services.AddGrpcClient<Auth.AuthClient>(options =>
         {
             options.Address = address;
