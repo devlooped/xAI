@@ -96,8 +96,7 @@ public class ChatClientTests(ITestOutputHelper output)
         Assert.Equal(options.ModelId, response.ModelId);
 
         var calls = response.Messages
-            .SelectMany(x => x.Contents.OfType<HostedToolCallContent>())
-            .Select(x => x.RawRepresentation as xAI.Protocol.ToolCall)
+            .SelectMany(x => x.Contents.Select(x => x.RawRepresentation as xAI.Protocol.ToolCall))
             .Where(x => x is not null)
             .ToList();
 
@@ -317,7 +316,6 @@ public class ChatClientTests(ITestOutputHelper output)
 
         var options = new GrokChatOptions
         {
-            Include = { IncludeOption.CollectionsSearchCallOutput },
             Tools = [new HostedFileSearchTool {
                 Inputs = [new HostedVectorStoreContent("collection_91559d9b-a55d-42fe-b2ad-ecf8904d9049")]
             }]
@@ -329,9 +327,21 @@ public class ChatClientTests(ITestOutputHelper output)
         Assert.Contains("11,74", text);
         Assert.Contains(response.Messages
                 .SelectMany(x => x.Contents)
-                .OfType<HostedToolCallContent>()
+                .OfType<CollectionSearchToolCallContent>()
                 .Select(x => x.RawRepresentation as xAI.Protocol.ToolCall),
             x => x?.Type == xAI.Protocol.ToolCallType.CollectionsSearchTool);
+        // No actual search results content since we didn't specify it in Include
+        Assert.Empty(response.Messages.SelectMany(x => x.Contents).OfType<CollectionSearchToolResultContent>());
+
+        options.Include = [IncludeOption.CollectionsSearchCallOutput];
+        response = await grok.GetResponseAsync(messages, options);
+
+        // Now it also contains the file reference as result content
+        Assert.Contains(response.Messages
+                .SelectMany(x => x.Contents)
+                .OfType<CollectionSearchToolResultContent>()
+                .SelectMany(x => (x.Outputs ?? []).OfType<HostedFileContent>()),
+            x => x.Name == "LNS0004592.txt");
     }
 
     [SecretsFact("XAI_API_KEY", "GITHUB_TOKEN")]
@@ -458,9 +468,8 @@ public class ChatClientTests(ITestOutputHelper output)
                 .OfType<McpServerToolCallContent>());
 
         Assert.Contains(response.Messages
-                .SelectMany(x => x.Contents)
-                .OfType<HostedToolCallContent>()
-                .Select(x => x.RawRepresentation as xAI.Protocol.ToolCall),
+                .SelectMany(x => x.Contents.Select(x => x.RawRepresentation as xAI.Protocol.ToolCall))
+                .Where(x => x != null),
             x => x?.Type == xAI.Protocol.ToolCallType.WebSearchTool);
 
         Assert.Equal(1, getDateCalls);

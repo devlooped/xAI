@@ -158,6 +158,50 @@ var options = new ChatOptions
 };
 ```
 
+To receive the actual search results and file references, include `CollectionsSearchCallOutput` in the options:
+
+```csharp
+var options = new GrokChatOptions
+{
+    Include = [IncludeOption.CollectionsSearchCallOutput],
+    Tools = [new HostedFileSearchTool {
+        Inputs = [new HostedVectorStoreContent("[collection_id]")]
+    }]
+};
+
+var response = await grok.GetResponseAsync(messages, options);
+
+// Access the search results with file references
+var results = response.Messages
+    .SelectMany(x => x.Contents)
+    .OfType<CollectionSearchToolResultContent>();
+
+foreach (var result in results)
+{
+    // Each result contains files that were found and referenced
+    var files = result.Outputs?.OfType<HostedFileContent>();
+    foreach (var file in files ?? [])
+    {
+        Console.WriteLine($"File: {file.Name} (ID: {file.FileId})");
+        
+        // Files include citation annotations with snippets
+        foreach (var citation in file.Annotations?.OfType<CitationAnnotation>() ?? [])
+        {
+            Console.WriteLine($"  Title: {citation.Title}");
+            Console.WriteLine($"  Snippet: {citation.Snippet}");
+            Console.WriteLine($"  URL: {citation.Url}"); // collections://[collection_id]/files/[file_id]
+        }
+    }
+}
+```
+
+Citations from collection search include:
+- **Title**: Extracted from the first line of the chunk content (if available), typically the file name or heading
+- **Snippet**: The relevant text excerpt from the document
+- **FileId**: Identifier of the source file in the collection
+- **Url**: A `collections://` URI pointing to the specific file within the collection
+- **ToolName**: Always set to `"collections_search"`
+
 Learn more about [collection search](https://docs.x.ai/docs/guides/tools/collections-search-tool).
 
 ## Remote MCP
