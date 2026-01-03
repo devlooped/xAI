@@ -267,7 +267,7 @@ corresponding [proto files](https://github.com/xai-org/xai-proto/tree/main/proto
 ```csharp
 var builder = Host.CreateApplicationBuilder(args); // or WebApplication.CreateBuilder(args);
 
-builder.Services.AddGrokClient(Environment.GetEnvironmentVariable("XAI_API_KEY")!);
+builder.Services.AddxAIProtocol(Environment.GetEnvironmentVariable("XAI_API_KEY")!);
 
 var app = builder.Build();
 ```
