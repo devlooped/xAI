@@ -56,34 +56,6 @@ class GrokChatClient : IChatClient
         return result;
     }
 
-    AIContent? MapToolCall(ToolCall toolCall) => toolCall.Type switch
-    {
-        ToolCallType.ClientSideTool => new FunctionCallContent(
-            toolCall.Id,
-            toolCall.Function.Name,
-            !string.IsNullOrEmpty(toolCall.Function.Arguments)
-                ? JsonSerializer.Deserialize<IDictionary<string, object?>>(toolCall.Function.Arguments)
-                : null)
-        {
-            RawRepresentation = toolCall
-        },
-        ToolCallType.McpTool => new McpServerToolCallContent(toolCall.Id, toolCall.Function.Name, null)
-        {
-            RawRepresentation = toolCall
-        },
-        ToolCallType.CodeExecutionTool => new CodeInterpreterToolCallContent()
-        {
-            CallId = toolCall.Id,
-            RawRepresentation = toolCall
-        },
-        ToolCallType.CollectionsSearchTool => new CollectionSearchToolCallContent()
-        {
-            CallId = toolCall.Id,
-            RawRepresentation = toolCall
-        },
-        _ => null
-    };
-
     public IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(IEnumerable<ChatMessage> messages, ChatOptions? options = null, CancellationToken cancellationToken = default)
     {
         return CompleteChatStreamingCore(messages, options, cancellationToken);
@@ -111,13 +83,13 @@ class GrokChatClient : IChatClient
                 var citations = chunk.Citations?.Distinct().Select(MapCitation).ToList<AIAnnotation>();
                 if (citations?.Count > 0)
                 {
-                    var textContent = update.Contents.OfType<TextContent>().FirstOrDefault();
-                    if (textContent == null)
+                    var content = update.Contents.LastOrDefault();
+                    if (content == null)
                     {
-                        textContent = new TextContent(string.Empty);
-                        update.Contents.Add(textContent);
+                        content = new AIContent();
+                        update.Contents.Add(content);
                     }
-                    ((List<AIAnnotation>)(textContent.Annotations ??= [])).AddRange(citations);
+                    ((List<AIAnnotation>)(content.Annotations ??= [])).AddRange(citations);
                 }
 
                 ((List<AIContent>)update.Contents).AddRange(output.Delta.ToolCalls.AsContents(text, citations));
