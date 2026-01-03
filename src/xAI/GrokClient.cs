@@ -1,6 +1,7 @@
 ﻿using System.Collections.Concurrent;
 using System.Net.Http.Headers;
 using Grpc.Net.Client;
+using xAI.Protocol;
 
 namespace xAI;
 
@@ -22,6 +23,27 @@ public sealed class GrokClient(string apiKey, GrokClientOptions options) : IDisp
 
     /// <summary>Gets the options used to configure the client.</summary>
     public GrokClientOptions Options { get; } = options;
+
+    /// <summary>Gets a new instance of <see cref="Auth.AuthClient"/> that reuses the client configuration details provided to the <see cref="GrokClient"/> instance.</summary>
+    public Auth.AuthClient GetAuthClient() => new(Channel);
+
+    /// <summary>Gets a new instance of <see cref="Chat.ChatClient"/> that reuses the client configuration details provided to the <see cref="GrokClient"/> instance.</summary>
+    public Chat.ChatClient GetChatClient() => new(Channel);
+
+    /// <summary>Gets a new instance of <see cref="Documents.DocumentsClient"/> that reuses the client configuration details provided to the <see cref="GrokClient"/> instance.</summary>
+    public Documents.DocumentsClient GetDocumentsClient() => new(Channel);
+
+    /// <summary>Gets a new instance of <see cref="Embedder.EmbedderClient"/> that reuses the client configuration details provided to the <see cref="GrokClient"/> instance.</summary>
+    public Embedder.EmbedderClient GetEmbedderClient() => new(Channel);
+
+    /// <summary>Gets a new instance of <see cref="Image.ImageClient"/> that reuses the client configuration details provided to the <see cref="GrokClient"/> instance.</summary>
+    public Image.ImageClient GetImageClient() => new(Channel);
+
+    /// <summary>Gets a new instance of <see cref="Models.ModelsClient"/> that reuses the client configuration details provided to the <see cref="GrokClient"/> instance.</summary>
+    public Models.ModelsClient GetModelsClient() => new(Channel);
+
+    /// <summary>Gets a new instance of <see cref="Tokenize.TokenizeClient"/> that reuses the client configuration details provided to the <see cref="GrokClient"/> instance.</summary>
+    public Tokenize.TokenizeClient GetTokenizeClient() => new(Channel);
 
     internal GrpcChannel Channel => channels.GetOrAdd((Endpoint, ApiKey), key =>
     {
