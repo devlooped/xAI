@@ -72,6 +72,9 @@ jobs:
         run: dotnet build -m:1 -bl:build.binlog
 
       - name: 🧪 test
+        env:
+          CI_XAI_API_KEY: ${{ secrets.CI_XAI_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
         shell: pwsh
         run: dnx --yes retest -- --no-build
 
