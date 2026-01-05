@@ -191,7 +191,7 @@ public class SanityChecks(ITestOutputHelper output)
             1. What is today's date? (use get_date tool)
             2. What is the current price of Tesla (TSLA) stock? (use Yahoo news web search)
             3. Calculate the earnings that would be produced by compound interest to $5k at 4% annually for 5 years (use code interpreter)
-            4. What is the latest release version of the devlooped/GrokClient repository? (use GitHub MCP tool)
+            4. What is the latest release version of the {{ThisAssembly.Git.Url}} repository? (use GitHub MCP tool)
             
             Respond with a JSON object in this exact format:
             {
