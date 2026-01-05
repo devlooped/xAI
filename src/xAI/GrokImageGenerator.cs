@@ -15,7 +15,8 @@ namespace xAI;
 /// </summary>
 sealed class GrokImageGenerator : IImageGenerator
 {
-    const string DefaultContentType = "image/png";
+    const string DefaultInputContentType = "image/png";
+    const string DefaultOutputContentType = "image/jpeg";
 
     readonly ImageGeneratorMetadata metadata;
     readonly ImageClient imageClient;
@@ -61,9 +62,7 @@ sealed class GrokImageGenerator : IImageGenerator
 
         // Set the number of images to generate
         if (options?.Count is { } count)
-        {
             protocolRequest.N = count;
-        }
 
         // Set the response format (URL or base64)
         if (options?.ResponseFormat is { } responseFormat)
@@ -85,10 +84,8 @@ sealed class GrokImageGenerator : IImageGenerator
                 // Convert the data content to a base64 string or URL for the API
                 var imageUrl = dataContent.Uri?.ToString();
                 if (imageUrl == null && dataContent.Data.Length > 0)
-                {
                     // Convert to base64 if we have raw data
-                    imageUrl = $"data:{dataContent.MediaType ?? DefaultContentType};base64,{Convert.ToBase64String(dataContent.Data.ToArray())}";
-                }
+                    imageUrl = $"data:{dataContent.MediaType ?? DefaultInputContentType};base64,{Convert.ToBase64String(dataContent.Data.ToArray())}";
 
                 if (imageUrl != null)
                 {
@@ -131,10 +128,10 @@ sealed class GrokImageGenerator : IImageGenerator
     /// <summary>
     /// Converts an xAI <see cref="ImageResponse"/> to a <see cref="ImageGenerationResponse"/>.
     /// </summary>
-    private static ImageGenerationResponse ToImageGenerationResponse(ImageResponse response, string? mediaType)
+    static ImageGenerationResponse ToImageGenerationResponse(ImageResponse response, string? mediaType)
     {
         var contents = new List<AIContent>();
-        var contentType = mediaType ?? "image/jpeg"; // xAI returns JPG by default
+        var contentType = mediaType ?? DefaultOutputContentType; // xAI returns JPG by default
 
         foreach (var image in response.Images)
         {
