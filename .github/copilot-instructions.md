@@ -118,7 +118,7 @@ Custom xUnit attributes for conditional test execution:
 
 #### Adding Dependencies
 - Add to appropriate `.csproj` file
-- Run `dotnet restore` to update lock files
+- Run `dotnet restore` to update dependencies
 - Ensure version consistency across projects where applicable
 
 ### Protobuf and Code Generation
