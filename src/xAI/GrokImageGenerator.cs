@@ -16,7 +16,6 @@ sealed class GrokImageGenerator : IImageGenerator
     readonly ImageGeneratorMetadata metadata;
     readonly ImageClient imageClient;
     readonly string defaultModelId;
-    readonly GrokClientOptions clientOptions;
 
     internal GrokImageGenerator(GrpcChannel channel, GrokClientOptions clientOptions, string defaultModelId)
         : this(new ImageClient(channel), clientOptions, defaultModelId)
@@ -32,7 +31,6 @@ sealed class GrokImageGenerator : IImageGenerator
     GrokImageGenerator(ImageClient imageClient, GrokClientOptions clientOptions, string defaultModelId)
     {
         this.imageClient = imageClient;
-        this.clientOptions = clientOptions;
         this.defaultModelId = defaultModelId;
         metadata = new ImageGeneratorMetadata("xai", clientOptions.Endpoint, defaultModelId);
     }
@@ -63,9 +61,8 @@ sealed class GrokImageGenerator : IImageGenerator
         }
 
         // Handle image editing if original images are provided
-        if (request.OriginalImages is not null && request.OriginalImages.Any())
+        if (request.OriginalImages?.FirstOrDefault() is { } originalImage)
         {
-            var originalImage = request.OriginalImages.FirstOrDefault();
             if (originalImage is DataContent dataContent)
             {
                 var imageUrl = dataContent.Uri?.ToString();
@@ -91,7 +88,7 @@ sealed class GrokImageGenerator : IImageGenerator
 
         var response = await imageClient.GenerateImageAsync(protocolRequest, cancellationToken: cancellationToken).ConfigureAwait(false);
 
-        return ToImageGenerationResponse(response, options?.MediaType);
+        return ToImageGenerationResponse(response);
     }
 
     /// <inheritdoc />
@@ -103,18 +100,14 @@ sealed class GrokImageGenerator : IImageGenerator
     };
 
     /// <inheritdoc />
-    void IDisposable.Dispose()
-    {
-        // Nothing to dispose. Implementation required for the IImageGenerator interface.
-    }
+    void IDisposable.Dispose() { }
 
     /// <summary>
     /// Converts an xAI <see cref="ImageResponse"/> to a <see cref="ImageGenerationResponse"/>.
     /// </summary>
-    static ImageGenerationResponse ToImageGenerationResponse(ImageResponse response, string? mediaType)
+    static ImageGenerationResponse ToImageGenerationResponse(ImageResponse response)
     {
         var contents = new List<AIContent>();
-        var contentType = mediaType ?? DefaultOutputContentType; // xAI returns JPG by default
 
         foreach (var image in response.Images)
         {
@@ -123,12 +116,12 @@ sealed class GrokImageGenerator : IImageGenerator
                 case GeneratedImage.ImageOneofCase.Base64:
                     {
                         var imageBytes = Convert.FromBase64String(image.Base64);
-                        contents.Add(new DataContent(imageBytes, contentType));
+                        contents.Add(new DataContent(imageBytes, DefaultOutputContentType));
                         break;
                     }
                 case GeneratedImage.ImageOneofCase.Url:
                     {
-                        contents.Add(new UriContent(new Uri(image.Url), contentType));
+                        contents.Add(new UriContent(new Uri(image.Url), DefaultOutputContentType));
                         break;
                     }
                 default:

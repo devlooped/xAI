@@ -17,7 +17,6 @@ public class ImageGeneratorTests(ITestOutputHelper output)
         var options = new ImageGenerationOptions
         {
             ResponseFormat = ImageGenerationResponseFormat.Uri,
-            Count = 1
         };
 
         var response = await imageGenerator.GenerateAsync(request, options);
@@ -44,6 +43,7 @@ public class ImageGeneratorTests(ITestOutputHelper output)
         var request = new ImageGenerationRequest("A cat sitting on a tree branch");
         var options = new ImageGenerationOptions
         {
+            MediaType = "image/png",
             ResponseFormat = ImageGenerationResponseFormat.Uri,
             Count = 1
         };
@@ -54,6 +54,8 @@ public class ImageGeneratorTests(ITestOutputHelper output)
         Assert.NotEmpty(response.Contents);
         Assert.Single(response.Contents);
         var image = Assert.IsType<UriContent>(response.Contents.First());
+        // media type in options is ignored and you always get the same jpg
+        Assert.Equal("image/jpg", image.MediaType);
         output.WriteLine($"Generated image URL: {image.Uri}");
 
         var edit = await imageGenerator.GenerateAsync(new ImageGenerationRequest("Edit provided image by adding a batman mask", [image]), options);
@@ -62,6 +64,8 @@ public class ImageGeneratorTests(ITestOutputHelper output)
         Assert.NotEmpty(edit.Contents);
         Assert.Single(edit.Contents);
         image = Assert.IsType<UriContent>(edit.Contents.First());
+        // media type in options is ignored and you always get the same jpg
+        Assert.Equal("image/jpg", image.MediaType);
 
         output.WriteLine($"Edited image URL: {image.Uri}");
     }
