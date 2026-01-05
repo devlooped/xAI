@@ -13,38 +13,32 @@ namespace xAI;
 /// <summary>
 /// Represents an <see cref="IImageGenerator"/> for xAI's Grok image generation service.
 /// </summary>
-internal sealed class GrokImageGenerator : IImageGenerator
+sealed class GrokImageGenerator : IImageGenerator
 {
-    /// <summary>Metadata about the image generator.</summary>
-    private readonly ImageGeneratorMetadata _metadata;
+    const string DefaultContentType = "image/png";
 
-    /// <summary>The underlying <see cref="ImageClient"/>.</summary>
-    private readonly ImageClient _imageClient;
+    readonly ImageGeneratorMetadata metadata;
+    readonly ImageClient imageClient;
+    readonly string defaultModelId;
+    readonly GrokClientOptions clientOptions;
 
-    /// <summary>The default model ID to use for image generation.</summary>
-    private readonly string _defaultModelId;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="GrokImageGenerator"/> class for the specified <see cref="GrpcChannel"/>.
-    /// </summary>
-    /// <param name="channel">The gRPC channel to use for communication.</param>
-    /// <param name="defaultModelId">The default model ID to use for image generation.</param>
-    internal GrokImageGenerator(GrpcChannel channel, string defaultModelId)
-        : this(new ImageClient(channel), defaultModelId)
-    {
-    }
+    internal GrokImageGenerator(GrpcChannel channel, GrokClientOptions clientOptions, string defaultModelId)
+        : this(new ImageClient(channel), clientOptions, defaultModelId)
+    { }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="GrokImageGenerator"/> class for the specified <see cref="ImageClient"/>.
+    /// Test constructor.
     /// </summary>
-    /// <param name="imageClient">The underlying image client.</param>
-    /// <param name="defaultModelId">The default model ID to use for image generation.</param>
-    /// <exception cref="ArgumentNullException"><paramref name="imageClient"/> is <see langword="null"/>.</exception>
-    public GrokImageGenerator(ImageClient imageClient, string defaultModelId)
+    internal GrokImageGenerator(ImageClient imageClient, string defaultModelId)
+        : this(imageClient, new(), defaultModelId)
+    { }
+
+    GrokImageGenerator(ImageClient imageClient, GrokClientOptions clientOptions, string defaultModelId)
     {
-        _imageClient = Throw.IfNull(imageClient);
-        _defaultModelId = Throw.IfNullOrWhitespace(defaultModelId);
-        _metadata = new ImageGeneratorMetadata("xai", null, defaultModelId);
+        this.imageClient = imageClient;
+        this.clientOptions = clientOptions;
+        this.defaultModelId = defaultModelId;
+        metadata = new ImageGeneratorMetadata("xai", clientOptions.Endpoint, defaultModelId);
     }
 
     /// <inheritdoc />
@@ -62,7 +56,7 @@ internal sealed class GrokImageGenerator : IImageGenerator
         var protocolRequest = new GenerateImageRequest
         {
             Prompt = prompt,
-            Model = options?.ModelId ?? _defaultModelId,
+            Model = options?.ModelId ?? defaultModelId,
         };
 
         // Set the number of images to generate
@@ -78,7 +72,7 @@ internal sealed class GrokImageGenerator : IImageGenerator
             {
                 ImageGenerationResponseFormat.Uri => ImageFormat.ImgFormatUrl,
                 ImageGenerationResponseFormat.Data => ImageFormat.ImgFormatBase64,
-                _ => ImageFormat.ImgFormatInvalid
+                _ => throw new ArgumentException($"Unsupported response format: {responseFormat}", nameof(options))
             };
         }
 
@@ -93,7 +87,7 @@ internal sealed class GrokImageGenerator : IImageGenerator
                 if (imageUrl == null && dataContent.Data.Length > 0)
                 {
                     // Convert to base64 if we have raw data
-                    imageUrl = $"data:{dataContent.MediaType ?? "image/png"};base64,{Convert.ToBase64String(dataContent.Data.ToArray())}";
+                    imageUrl = $"data:{dataContent.MediaType ?? DefaultContentType};base64,{Convert.ToBase64String(dataContent.Data.ToArray())}";
                 }
 
                 if (imageUrl != null)
@@ -114,20 +108,19 @@ internal sealed class GrokImageGenerator : IImageGenerator
         }
 
         // Call the gRPC API
-        var response = await _imageClient.GenerateImageAsync(protocolRequest, cancellationToken: cancellationToken).ConfigureAwait(false);
+        var response = await imageClient.GenerateImageAsync(protocolRequest, cancellationToken: cancellationToken).ConfigureAwait(false);
 
         // Convert the response to the Microsoft.Extensions.AI format
         return ToImageGenerationResponse(response, options?.MediaType);
     }
 
     /// <inheritdoc />
-    public object? GetService(Type serviceType, object? serviceKey = null) =>
-        serviceType is null ? throw new ArgumentNullException(nameof(serviceType)) :
-        serviceKey is not null ? null :
-        serviceType == typeof(ImageGeneratorMetadata) ? _metadata :
-        serviceType == typeof(ImageClient) ? _imageClient :
-        serviceType.IsInstanceOfType(this) ? this :
-        null;
+    public object? GetService(Type serviceType, object? serviceKey = null) => serviceType switch
+    {
+        Type t when t == typeof(ImageGeneratorMetadata) => metadata,
+        Type t when t == typeof(GrokImageGenerator) => this,
+        _ => null
+    };
 
     /// <inheritdoc />
     void IDisposable.Dispose()
