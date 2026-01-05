@@ -55,8 +55,7 @@ class GrokEmbeddingGenerator : IEmbeddingGenerator<string, Embedding<float>>
         foreach (var embedding in response.Embeddings.OrderBy(e => e.Index))
         {
             // Each input can produce multiple feature vectors, we take the first one for text inputs
-            var featureVector = embedding.Embeddings.FirstOrDefault();
-            if (featureVector != null)
+            if (embedding.Embeddings.FirstOrDefault() is { } featureVector)
             {
                 result.Add(new Embedding<float>(featureVector.FloatArray.ToArray())
                 {
