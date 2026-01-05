@@ -19,7 +19,7 @@ public static class GrpcExtensions
         }
 
         /// <summary>Lists available embedding models.</summary>
-        public async Task<IEnumerable<EmbeddingModel>> ListEmbeddingModelsAsync(CancellationToken cancellation)
+        public async Task<IEnumerable<EmbeddingModel>> ListEmbeddingModelsAsync(CancellationToken cancellation = default)
         {
             var models = await client.ListEmbeddingModelsAsync(new Empty(), cancellationToken: cancellation);
             return models.Models;
