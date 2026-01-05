@@ -11,7 +11,7 @@ public class ImageGeneratorTests(ITestOutputHelper output)
     public async Task GenerateImage_WithPrompt_ReturnsImageContent()
     {
         var imageGenerator = new GrokClient(Configuration["XAI_API_KEY"]!)
-            .AsIImageGenerator("grok-2-image");
+            .AsIImageGenerator("grok-imagine-image-beta");
 
         var request = new ImageGenerationRequest("A cat sitting on a tree branch");
         var options = new ImageGenerationOptions
@@ -25,14 +25,45 @@ public class ImageGeneratorTests(ITestOutputHelper output)
         Assert.NotNull(response);
         Assert.NotEmpty(response.Contents);
         Assert.Single(response.Contents);
-        
+
         var image = response.Contents.First();
         Assert.True(image is UriContent);
-        
+
         var uriContent = (UriContent)image;
         Assert.NotNull(uriContent.Uri);
-        
+
         output.WriteLine($"Generated image URL: {uriContent.Uri}");
+    }
+
+    [SecretsFact("XAI_API_KEY")]
+    public async Task GenerateImage_WithEditsToPreviousImage()
+    {
+        var imageGenerator = new GrokClient(Configuration["XAI_API_KEY"]!)
+            .AsIImageGenerator("grok-imagine-image-beta");
+
+        var request = new ImageGenerationRequest("A cat sitting on a tree branch");
+        var options = new ImageGenerationOptions
+        {
+            ResponseFormat = ImageGenerationResponseFormat.Uri,
+            Count = 1
+        };
+
+        var response = await imageGenerator.GenerateAsync(request, options);
+
+        Assert.NotNull(response);
+        Assert.NotEmpty(response.Contents);
+        Assert.Single(response.Contents);
+        var image = Assert.IsType<UriContent>(response.Contents.First());
+        output.WriteLine($"Generated image URL: {image.Uri}");
+
+        var edit = await imageGenerator.GenerateAsync(new ImageGenerationRequest("Edit provided image by adding a batman mask", [image]), options);
+
+        Assert.NotNull(edit);
+        Assert.NotEmpty(edit.Contents);
+        Assert.Single(edit.Contents);
+        image = Assert.IsType<UriContent>(edit.Contents.First());
+
+        output.WriteLine($"Edited image URL: {image.Uri}");
     }
 
     [SecretsFact("XAI_API_KEY")]
@@ -53,14 +84,14 @@ public class ImageGeneratorTests(ITestOutputHelper output)
         Assert.NotNull(response);
         Assert.NotEmpty(response.Contents);
         Assert.Single(response.Contents);
-        
+
         var image = response.Contents.First();
         Assert.True(image is DataContent);
-        
+
         var dataContent = (DataContent)image;
         Assert.True(dataContent.Data.Length > 0);
         Assert.Equal("image/jpeg", dataContent.MediaType);
-        
+
         output.WriteLine($"Generated image size: {dataContent.Data.Length} bytes");
     }
 
@@ -82,7 +113,7 @@ public class ImageGeneratorTests(ITestOutputHelper output)
         Assert.NotNull(response);
         Assert.NotEmpty(response.Contents);
         Assert.Equal(3, response.Contents.Count);
-        
+
         foreach (var image in response.Contents)
         {
             Assert.True(image is UriContent);
@@ -106,7 +137,7 @@ public class ImageGeneratorTests(ITestOutputHelper output)
 
         Assert.NotNull(response);
         Assert.NotNull(response.RawRepresentation);
-        
+
         // The raw representation should be an ImageResponse from the protocol
         var rawResponse = Assert.IsType<xAI.Protocol.ImageResponse>(response.RawRepresentation);
         Assert.NotNull(rawResponse.Model);

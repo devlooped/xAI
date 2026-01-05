@@ -1,8 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using Grpc.Net.Client;
 using Microsoft.Extensions.AI;
 using xAI.Protocol;
@@ -48,23 +43,15 @@ sealed class GrokImageGenerator : IImageGenerator
         ImageGenerationOptions? options = null,
         CancellationToken cancellationToken = default)
     {
-        _ = Throw.IfNull(request);
-
-        string? prompt = request.Prompt;
-        _ = Throw.IfNull(prompt);
-
-        // Build the protocol request
         var protocolRequest = new GenerateImageRequest
         {
-            Prompt = prompt,
+            Prompt = Throw.IfNull(Throw.IfNull(request).Prompt, "request.Prompt"),
             Model = options?.ModelId ?? defaultModelId,
         };
 
-        // Set the number of images to generate
         if (options?.Count is { } count)
             protocolRequest.N = count;
 
-        // Set the response format (URL or base64)
         if (options?.ResponseFormat is { } responseFormat)
         {
             protocolRequest.Format = responseFormat switch
@@ -81,10 +68,8 @@ sealed class GrokImageGenerator : IImageGenerator
             var originalImage = request.OriginalImages.FirstOrDefault();
             if (originalImage is DataContent dataContent)
             {
-                // Convert the data content to a base64 string or URL for the API
                 var imageUrl = dataContent.Uri?.ToString();
                 if (imageUrl == null && dataContent.Data.Length > 0)
-                    // Convert to base64 if we have raw data
                     imageUrl = $"data:{dataContent.MediaType ?? DefaultInputContentType};base64,{Convert.ToBase64String(dataContent.Data.ToArray())}";
 
                 if (imageUrl != null)
@@ -104,10 +89,8 @@ sealed class GrokImageGenerator : IImageGenerator
             }
         }
 
-        // Call the gRPC API
         var response = await imageClient.GenerateImageAsync(protocolRequest, cancellationToken: cancellationToken).ConfigureAwait(false);
 
-        // Convert the response to the Microsoft.Extensions.AI format
         return ToImageGenerationResponse(response, options?.MediaType);
     }
 
