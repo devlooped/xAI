@@ -11,6 +11,21 @@ namespace xAI.Tests;
 public class SanityChecks(ITestOutputHelper output)
 {
     [SecretsFact("CI_XAI_API_KEY")]
+    public async Task NoEmbeddingModels()
+    {
+        var services = new ServiceCollection()
+            .AddxAIProtocol(Environment.GetEnvironmentVariable("CI_XAI_API_KEY")!)
+            .BuildServiceProvider();
+
+        var client = services.GetRequiredService<Models.ModelsClient>();
+
+        var embeddings = await client.ListEmbeddingModelsAsync();
+
+        Assert.NotNull(embeddings);
+        Assert.Empty(embeddings);
+    }
+
+    [SecretsFact("CI_XAI_API_KEY")]
     public async Task ListModelsAsync()
     {
         var services = new ServiceCollection()
