@@ -1,8 +1,32 @@
 # Changelog
 
+## [v1.0.0](https://github.com/devlooped/xAI/tree/v1.0.0) (2026-01-05)
+
+[Full Changelog](https://github.com/devlooped/xAI/compare/v1.0.0-preview.1...v1.0.0)
+
+:sparkles: Implemented enhancements:
+
+- Improve content type detection from responses [\#49](https://github.com/devlooped/xAI/pull/49) (@kzu)
+- Expose specific protocol clients from GrokClient [\#39](https://github.com/devlooped/xAI/pull/39) (@kzu)
+
+:hammer: Other:
+
+- ✨ Set up Copilot instructions [\#46](https://github.com/devlooped/xAI/issues/46)
+- Add support for IImageGenerator [\#44](https://github.com/devlooped/xAI/issues/44)
+- Implement IEmbeddingGenerator interface on top of Embedder.EmbedderClient [\#40](https://github.com/devlooped/xAI/issues/40)
+
+:twisted_rightwards_arrows: Merged:
+
+- Document via tests that image content type is jpeg [\#48](https://github.com/devlooped/xAI/pull/48) (@kzu)
+- Add comprehensive Copilot instructions for coding agent [\#47](https://github.com/devlooped/xAI/pull/47) (@Copilot)
+- Add IImageGenerator implementation for xAI image generation [\#45](https://github.com/devlooped/xAI/pull/45) (@Copilot)
+- Add test that verifies embeddings aren't supported [\#43](https://github.com/devlooped/xAI/pull/43) (@kzu)
+- Run sanity/integration tests in CI [\#38](https://github.com/devlooped/xAI/pull/38) (@kzu)
+- Take header inspiration from python sdk [\#37](https://github.com/devlooped/xAI/pull/37) (@kzu)
+
 ## [v1.0.0-preview.1](https://github.com/devlooped/xAI/tree/v1.0.0-preview.1) (2026-01-02)
 
-[Full Changelog](https://github.com/devlooped/xAI/compare/v1.1.0...v1.0.0-preview.1)
+[Full Changelog](https://github.com/devlooped/xAI/compare/v0.1.0...v1.0.0-preview.1)
 
 :sparkles: Implemented enhancements:
 
@@ -13,58 +37,14 @@
 - Bring in M.E.AI integration from Devlooped.Extensions.AI [\#30](https://github.com/devlooped/xAI/pull/30) (@kzu)
 - Rename xAI project to xAI.Protocol [\#27](https://github.com/devlooped/xAI/pull/27) (@kzu)
 - Rename to xAI [\#25](https://github.com/devlooped/xAI/pull/25) (@kzu)
+- ⬆️ Add hybrid/semantic/keyword retrieval modes with reranker config [\#12](https://github.com/devlooped/xAI/pull/12) (@kzu)
+- ⬆️ Rename server-side document search tools to attachment search [\#11](https://github.com/devlooped/xAI/pull/11) (@kzu)
+- ⬆️ Add new include option for verbose chunks in streaming response [\#10](https://github.com/devlooped/xAI/pull/10) (@kzu)
+- ⬆️ Add end\_index for InlineCitation [\#9](https://github.com/devlooped/xAI/pull/9) (@kzu)
 
 :twisted_rightwards_arrows: Merged:
 
 - Fix protocol package id [\#28](https://github.com/devlooped/xAI/pull/28) (@kzu)
-
-## [v1.1.0](https://github.com/devlooped/xAI/tree/v1.1.0) (2025-12-05)
-
-[Full Changelog](https://github.com/devlooped/xAI/compare/v1.0.3...v1.1.0)
-
-:sparkles: Implemented enhancements:
-
-- ⬆️ Add hybrid/semantic/keyword retrieval modes with reranker config [\#12](https://github.com/devlooped/xAI/pull/12) (@kzu)
-
-## [v1.0.3](https://github.com/devlooped/xAI/tree/v1.0.3) (2025-12-04)
-
-[Full Changelog](https://github.com/devlooped/xAI/compare/v1.0.2...v1.0.3)
-
-:sparkles: Implemented enhancements:
-
-- ⬆️ Rename server-side document search tools to attachment search [\#11](https://github.com/devlooped/xAI/pull/11) (@kzu)
-
-## [v1.0.2](https://github.com/devlooped/xAI/tree/v1.0.2) (2025-12-03)
-
-[Full Changelog](https://github.com/devlooped/xAI/compare/v1.0.1...v1.0.2)
-
-:sparkles: Implemented enhancements:
-
-- ⬆️ Add new include option for verbose chunks in streaming response [\#10](https://github.com/devlooped/xAI/pull/10) (@kzu)
-
-## [v1.0.1](https://github.com/devlooped/xAI/tree/v1.0.1) (2025-12-02)
-
-[Full Changelog](https://github.com/devlooped/xAI/compare/v1.0.0...v1.0.1)
-
-:sparkles: Implemented enhancements:
-
-- ⬆️ Add end\_index for InlineCitation [\#9](https://github.com/devlooped/xAI/pull/9) (@kzu)
-
-## [v1.0.0](https://github.com/devlooped/xAI/tree/v1.0.0) (2025-11-29)
-
-[Full Changelog](https://github.com/devlooped/xAI/compare/v1.0.0-rc...v1.0.0)
-
-## [v1.0.0-rc](https://github.com/devlooped/xAI/tree/v1.0.0-rc) (2025-11-29)
-
-[Full Changelog](https://github.com/devlooped/xAI/compare/v1.0.0-beta...v1.0.0-rc)
-
-## [v1.0.0-beta](https://github.com/devlooped/xAI/tree/v1.0.0-beta) (2025-11-29)
-
-[Full Changelog](https://github.com/devlooped/xAI/compare/v1.0.0-alpha...v1.0.0-beta)
-
-## [v1.0.0-alpha](https://github.com/devlooped/xAI/tree/v1.0.0-alpha) (2025-11-29)
-
-[Full Changelog](https://github.com/devlooped/xAI/compare/v0.1.0...v1.0.0-alpha)
 
 ## [v0.1.0](https://github.com/devlooped/xAI/tree/v0.1.0) (2025-11-25)
 
