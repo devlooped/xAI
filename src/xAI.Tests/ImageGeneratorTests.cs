@@ -74,7 +74,7 @@ public class ImageGeneratorTests(ITestOutputHelper output)
     public async Task GenerateImage_WithBase64Response_ReturnsDataContent()
     {
         var imageGenerator = new GrokClient(Configuration["XAI_API_KEY"]!)
-            .AsIImageGenerator("grok-2-image");
+            .AsIImageGenerator("grok-imagine-image-beta");
 
         var request = new ImageGenerationRequest("A sunset over mountains");
         var options = new ImageGenerationOptions
@@ -97,6 +97,22 @@ public class ImageGeneratorTests(ITestOutputHelper output)
         Assert.Equal("image/jpeg", dataContent.MediaType);
 
         output.WriteLine($"Generated image size: {dataContent.Data.Length} bytes");
+    }
+
+    [SecretsFact("XAI_API_KEY")]
+    public async Task GenerateImage_DefaultsToUriContent()
+    {
+        var imageGenerator = new GrokClient(Configuration["XAI_API_KEY"]!)
+            .AsIImageGenerator("grok-imagine-image-beta");
+
+        var request = new ImageGenerationRequest("A sunset over mountains");
+        var response = await imageGenerator.GenerateAsync(request);
+
+        Assert.NotNull(response);
+        Assert.NotEmpty(response.Contents);
+        Assert.Single(response.Contents);
+
+        Assert.IsType<UriContent>(response.Contents.First());
     }
 
     [SecretsFact("XAI_API_KEY")]
