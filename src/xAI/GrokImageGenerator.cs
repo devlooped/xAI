@@ -155,7 +155,6 @@ sealed class GrokImageGenerator : IImageGenerator
 
         return new ImageGenerationResponse(contents)
         {
-            ModelId = response.Model,
             RawRepresentation = response,
         };
     }

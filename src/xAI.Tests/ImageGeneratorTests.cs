@@ -23,10 +23,10 @@ public class ImageGeneratorTests(ITestOutputHelper output)
         var response = await imageGenerator.GenerateAsync(request, options);
 
         Assert.NotNull(response);
-        Assert.NotEmpty(response.Images);
-        Assert.Single(response.Images);
+        Assert.NotEmpty(response.Contents);
+        Assert.Single(response.Contents);
         
-        var image = response.Images.First();
+        var image = response.Contents.First();
         Assert.True(image is UriContent);
         
         var uriContent = (UriContent)image;
@@ -51,10 +51,10 @@ public class ImageGeneratorTests(ITestOutputHelper output)
         var response = await imageGenerator.GenerateAsync(request, options);
 
         Assert.NotNull(response);
-        Assert.NotEmpty(response.Images);
-        Assert.Single(response.Images);
+        Assert.NotEmpty(response.Contents);
+        Assert.Single(response.Contents);
         
-        var image = response.Images.First();
+        var image = response.Contents.First();
         Assert.True(image is DataContent);
         
         var dataContent = (DataContent)image;
@@ -80,10 +80,10 @@ public class ImageGeneratorTests(ITestOutputHelper output)
         var response = await imageGenerator.GenerateAsync(request, options);
 
         Assert.NotNull(response);
-        Assert.NotEmpty(response.Images);
-        Assert.Equal(3, response.Images.Count);
+        Assert.NotEmpty(response.Contents);
+        Assert.Equal(3, response.Contents.Count);
         
-        foreach (var image in response.Images)
+        foreach (var image in response.Contents)
         {
             Assert.True(image is UriContent);
             output.WriteLine($"Image URL: {((UriContent)image).Uri}");
@@ -91,7 +91,7 @@ public class ImageGeneratorTests(ITestOutputHelper output)
     }
 
     [SecretsFact("XAI_API_KEY")]
-    public async Task GenerateImage_ResponseContainsModelId()
+    public async Task GenerateImage_ResponseContainsRawRepresentation()
     {
         var imageGenerator = new GrokClient(Configuration["XAI_API_KEY"]!)
             .AsIImageGenerator("grok-2-image");
@@ -105,8 +105,12 @@ public class ImageGeneratorTests(ITestOutputHelper output)
         var response = await imageGenerator.GenerateAsync(request, options);
 
         Assert.NotNull(response);
-        Assert.NotNull(response.ModelId);
-        output.WriteLine($"Model used: {response.ModelId}");
+        Assert.NotNull(response.RawRepresentation);
+        
+        // The raw representation should be an ImageResponse from the protocol
+        var rawResponse = Assert.IsType<xAI.Protocol.ImageResponse>(response.RawRepresentation);
+        Assert.NotNull(rawResponse.Model);
+        output.WriteLine($"Model used: {rawResponse.Model}");
     }
 
     [Fact]
@@ -141,6 +145,6 @@ public class ImageGeneratorTests(ITestOutputHelper output)
 
         Assert.NotNull(metadata);
         Assert.Equal("xai", metadata.ProviderName);
-        Assert.Equal("grok-2-image", metadata.ModelId);
+        Assert.Equal("grok-2-image", metadata.DefaultModelId);
     }
 }
