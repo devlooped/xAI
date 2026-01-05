@@ -10,6 +10,18 @@ namespace xAI;
 /// </summary>
 sealed class GrokImageGenerator : IImageGenerator
 {
+    // add inverted dictionary for extension to mime type if needed in future
+    static readonly Dictionary<string, string> extensionToMimeType = new(StringComparer.OrdinalIgnoreCase)
+    {
+        [".png"] = "image/png",
+        [".jpg"] = "image/jpeg",
+        [".jpeg"] = "image/jpeg",
+        [".webp"] = "image/webp",
+        [".gif"] = "image/gif",
+        [".bmp"] = "image/bmp",
+        [".tiff"] = "image/tiff",
+    };
+
     const string DefaultInputContentType = "image/png";
     const string DefaultOutputContentType = "image/jpeg";
 
@@ -50,15 +62,12 @@ sealed class GrokImageGenerator : IImageGenerator
         if (options?.Count is { } count)
             protocolRequest.N = count;
 
-        if (options?.ResponseFormat is { } responseFormat)
+        protocolRequest.Format = (options?.ResponseFormat ?? ImageGenerationResponseFormat.Uri) switch
         {
-            protocolRequest.Format = responseFormat switch
-            {
-                ImageGenerationResponseFormat.Uri => ImageFormat.ImgFormatUrl,
-                ImageGenerationResponseFormat.Data => ImageFormat.ImgFormatBase64,
-                _ => throw new ArgumentException($"Unsupported response format: {responseFormat}", nameof(options))
-            };
-        }
+            ImageGenerationResponseFormat.Uri => ImageFormat.ImgFormatUrl,
+            ImageGenerationResponseFormat.Data => ImageFormat.ImgFormatBase64,
+            _ => throw new ArgumentException($"Unsupported response format: {options?.ResponseFormat}", nameof(options))
+        };
 
         // Handle image editing if original images are provided
         if (request.OriginalImages?.FirstOrDefault() is { } originalImage)
@@ -108,6 +117,7 @@ sealed class GrokImageGenerator : IImageGenerator
     static ImageGenerationResponse ToImageGenerationResponse(ImageResponse response)
     {
         var contents = new List<AIContent>();
+        var contentType = DefaultOutputContentType;
 
         foreach (var image in response.Images)
         {
@@ -115,13 +125,17 @@ sealed class GrokImageGenerator : IImageGenerator
             {
                 case GeneratedImage.ImageOneofCase.Base64:
                     {
+                        // We assume JPEG since there's no way to get the actual content type.
                         var imageBytes = Convert.FromBase64String(image.Base64);
-                        contents.Add(new DataContent(imageBytes, DefaultOutputContentType));
+                        contents.Add(new DataContent(imageBytes, contentType));
                         break;
                     }
                 case GeneratedImage.ImageOneofCase.Url:
                     {
-                        contents.Add(new UriContent(new Uri(image.Url), DefaultOutputContentType));
+                        if (Path.GetExtension(image.Url) is { } extension && extensionToMimeType.TryGetValue(extension, out var mimeType))
+                            contentType = mimeType;
+
+                        contents.Add(new UriContent(new Uri(image.Url), contentType));
                         break;
                     }
                 default:
