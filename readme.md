@@ -250,6 +250,59 @@ var options = new GrokChatOptions
 ```
 
 Learn more about [Remote MCP tools](https://docs.x.ai/docs/guides/tools/remote-mcp-tools).
+
+## Image Generation
+
+Grok also supports image generation using the `IImageGenerator` abstraction from 
+Microsoft.Extensions.AI. Use the `AsIImageGenerator` extension method to get an 
+image generator client:
+
+```csharp
+var imageGenerator = new GrokClient(Environment.GetEnvironmentVariable("XAI_API_KEY")!)
+    .AsIImageGenerator("grok-imagine-image-beta");
+
+var request = new ImageGenerationRequest("A cat sitting on a tree branch");
+var options = new ImageGenerationOptions
+{
+    ResponseFormat = ImageGenerationResponseFormat.Uri,
+    Count = 1
+};
+
+var response = await imageGenerator.GenerateAsync(request, options);
+
+var image = (UriContent)response.Contents.First();
+Console.WriteLine($"Generated image URL: {image.Uri}");
+```
+
+### Editing Images
+
+You can also edit previously generated images by passing them as input to a new 
+generation request:
+
+```csharp
+var imageGenerator = new GrokClient(Environment.GetEnvironmentVariable("XAI_API_KEY")!)
+    .AsIImageGenerator("grok-imagine-image-beta");
+
+// First, generate the original image
+var request = new ImageGenerationRequest("A cat sitting on a tree branch");
+var options = new ImageGenerationOptions
+{
+    ResponseFormat = ImageGenerationResponseFormat.Uri,
+    Count = 1
+};
+
+var response = await imageGenerator.GenerateAsync(request, options);
+var image = (UriContent)response.Contents.First();
+
+// Now edit the image by providing it as input along with the edit instructions
+var edit = await imageGenerator.GenerateAsync(
+    new ImageGenerationRequest("Edit provided image by adding a batman mask", [image]), 
+    options);
+
+var editedImage = (UriContent)edit.Contents.First();
+Console.WriteLine($"Edited image URL: {editedImage.Uri}");
+```
+
 <!-- #xai -->
 
 # xAI.Protocol
