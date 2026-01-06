@@ -4,7 +4,7 @@
     <TargetFramework>net8.0</TargetFramework>
     <AssemblyName>xAI.Protocol</AssemblyName>
     <PackageId>xAI.Protocol</PackageId>
-    <Description>xAI gRPC protocol client based on the official API reference from xAI.</Description>
+    <Description>xAI Grok gRPC protocol client based on the official API reference from xAI.</Description>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <PackageTags>xai ai grok llm</PackageTags>
     <PackageLicenseExpression></PackageLicenseExpression>
