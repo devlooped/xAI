@@ -345,6 +345,17 @@ See for example the [introduction of tool output and citations](https://github.c
 
 <!-- #protocol -->
 
+# CLI
+[![Version](https://img.shields.io/nuget/vpre/grok.svg?color=royalblue)](https://www.nuget.org/packages/grok)
+[![Downloads](https://img.shields.io/nuget/dt/grok.svg?color=green)](https://www.nuget.org/packages/grok)
+
+<!-- #cli -->
+Sample Grok CLI client based on the xAI 
+
+![](https://raw.githubusercontent.com/devlooped/xAI/main/assets/img/cli.png)
+
+Uses your own API Key.
+
 <!-- include https://github.com/devlooped/sponsors/raw/main/footer.md -->
 # Sponsors 
 
