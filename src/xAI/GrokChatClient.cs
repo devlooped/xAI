@@ -95,7 +95,7 @@ class GrokChatClient : IChatClient
 
                 ((List<AIContent>)update.Contents).AddRange(output.Delta.ToolCalls.AsContents(text, citations));
 
-		// Only append text content if it's not already part of other tools' content
+                // Only append text content if it's not already part of other tools' content
                 if (!update.Contents.OfType<CodeInterpreterToolResultContent>().Any() &&
                     !update.Contents.OfType<McpServerToolResultContent>().Any() &&
                     text is not null)
