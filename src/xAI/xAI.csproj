@@ -4,7 +4,8 @@
     <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
     <AssemblyName>xAI</AssemblyName>
     <PackageId>xAI</PackageId>
-    <Description>xAI Grok integration for Microsoft.Extensions.AI</Description>
+    <Description>xAI / Grok integration for Microsoft.Extensions.AI</Description>
+    <PackageTags>xai ai grok llm</PackageTags>
     <PackageLicenseExpression></PackageLicenseExpression>
     <PackageLicenseFile>OSMFEULA.txt</PackageLicenseFile>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>

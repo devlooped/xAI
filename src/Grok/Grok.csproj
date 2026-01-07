@@ -5,6 +5,11 @@
     <TargetFramework>net10.0</TargetFramework>
     <PackageId>grok</PackageId>
     <Description>Sample Grok CLI using xAI and xAI.Protocol packages</Description>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <ToolCommandName>grok</ToolCommandName>
+    <PackageTags>dotnet-tool xai ai grok llm</PackageTags>
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+    <PackAsTool>true</PackAsTool>
     <NoWarn>MEAI001;xAI001;$(NoWarn)</NoWarn>
   </PropertyGroup>
 
