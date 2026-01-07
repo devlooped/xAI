@@ -71,8 +71,9 @@ class GrokChatClient : IChatClient
                 var text = output.Delta.Content is { Length: > 0 } delta ? delta : null;
 
                 // Use positional arguments for ChatResponseUpdate
-                var update = new ChatResponseUpdate(MapRole(output.Delta.Role), text)
+                var update = new ChatResponseUpdate
                 {
+                    Role = MapRole(output.Delta.Role),
                     ResponseId = chunk.Id,
                     ModelId = chunk.Model,
                     CreatedAt = chunk.Created?.ToDateTimeOffset(),
@@ -93,6 +94,12 @@ class GrokChatClient : IChatClient
                 }
 
                 ((List<AIContent>)update.Contents).AddRange(output.Delta.ToolCalls.AsContents(text, citations));
+
+		// Only append text content if it's not already part of other tools' content
+                if (!update.Contents.OfType<CodeInterpreterToolResultContent>().Any() &&
+                    !update.Contents.OfType<McpServerToolResultContent>().Any() &&
+                    text is not null)
+                    update.Contents.Add(new TextContent(text));
 
                 if (MapToUsage(chunk.Usage) is { } usage)
                     update.Contents.Add(new UsageContent(usage) { RawRepresentation = chunk.Usage });
@@ -279,8 +286,6 @@ class GrokChatClient : IChatClient
     {
         InputTokenCount = usage.PromptTokens,
         OutputTokenCount = usage.CompletionTokens,
-        CachedInputTokenCount = usage.CachedPromptTextTokens,
-        ReasoningTokenCount = usage.ReasoningTokens,
         TotalTokenCount = usage.TotalTokens
     };
 
