@@ -2,7 +2,6 @@
 [![OSS](https://img.shields.io/github/license/devlooped/oss.svg?color=blue)](license.txt) 
 [![GitHub](https://img.shields.io/badge/-source-181717.svg?logo=GitHub)](https://github.com/devlooped/xAI)
 
-<!-- include ../../readme.md#xai -->
-<!-- include https://github.com/devlooped/.github/raw/main/osmf.md -->
+<!-- include ../../readme.md#cli -->
 <!-- include https://github.com/devlooped/sponsors/raw/main/footer.md -->
 <!-- exclude -->
