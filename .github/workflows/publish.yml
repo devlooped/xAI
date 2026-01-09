@@ -6,6 +6,18 @@ name: publish
 on:
   release:
     types: [prereleased, released]
+  workflow_dispatch:
+    inputs:
+      configuration:
+        type: choice
+        description: Configuration
+        options: 
+        - Release
+        - Debug
+      sha:
+        description: 'Optional commit to deploy (latest if empty)'
+      version:
+        description: 'SemVer version to use (0.1.0-preview.[build] if empty)'
 
 env:
   DOTNET_NOLOGO: true
@@ -13,6 +25,7 @@ env:
   PackOnBuild: true
   GeneratePackageOnBuild: true
   VersionLabel: ${{ github.ref }}
+  VersionOrTag: ${{ github.event.inputs.version || github.event.release.tag_name || format('0.1.0-preview.{0}', github.run_number) }}
   GH_TOKEN: ${{ secrets.GH_TOKEN }}
   MSBUILDTERMINALLOGGER: auto
   SLEET_FEED_URL: https://api.nuget.org/v3/index.json
@@ -29,6 +42,9 @@ jobs:
 
       - name: ⚙ dotnet
         uses: devlooped/actions-dotnet-env@v1
+
+      - name: 📝 version
+        run: echo "Version=${VersionOrTag/v}" >> $GITHUB_ENV
 
       - name: 🙏 build
         run: dotnet build -m:1 -bl:build.binlog
