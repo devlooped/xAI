@@ -1,5 +1,17 @@
 # Changelog
 
+## [v1.0.2](https://github.com/devlooped/xAI/tree/v1.0.2) (2026-01-09)
+
+[Full Changelog](https://github.com/devlooped/xAI/compare/v1.0.1...v1.0.2)
+
+:bug: Fixed bugs:
+
+- Ensure Usage is reported in streaming [\#52](https://github.com/devlooped/xAI/pull/52) (@kzu)
+
+:twisted_rightwards_arrows: Merged:
+
+- Add sample CLI using the Grok client [\#51](https://github.com/devlooped/xAI/pull/51) (@kzu)
+
 ## [v1.0.1](https://github.com/devlooped/xAI/tree/v1.0.1) (2026-01-06)
 
 [Full Changelog](https://github.com/devlooped/xAI/compare/v1.0.0...v1.0.1)
