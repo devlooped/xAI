@@ -40,9 +40,13 @@ xAI/Grok integration for Microsoft.Extensions.AI `IChatClient` with full support
 [agentic tools](https://docs.x.ai/docs/guides/tools/overview):
 
 ```csharp
-var grok = new GrokClient(Environment.GetEnvironmentVariable("XAI_API_KEY")!)
+var chat = new GrokClient(Environment.GetEnvironmentVariable("XAI_API_KEY")!)
     .AsIChatClient("grok-4.1-fast");
+
+var images = new GrokClient(Environment.GetEnvironmentVariable("XAI_API_KEY")!)
+    .AsIImageGenerator("grok-imagine-image-beta");
 ```
+
 ## Web Search
 
 ```csharp
