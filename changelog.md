@@ -1,5 +1,9 @@
 # Changelog
 
+## [v1.0.3-preview.1](https://github.com/devlooped/xAI/tree/v1.0.3-preview.1) (2026-01-09)
+
+[Full Changelog](https://github.com/devlooped/xAI/compare/v1.0.2...v1.0.3-preview.1)
+
 ## [v1.0.2](https://github.com/devlooped/xAI/tree/v1.0.2) (2026-01-09)
 
 [Full Changelog](https://github.com/devlooped/xAI/compare/v1.0.1...v1.0.2)
