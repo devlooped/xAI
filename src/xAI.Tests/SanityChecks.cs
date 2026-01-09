@@ -185,18 +185,19 @@ public class SanityChecks(ITestOutputHelper output)
         { "system", "You are a helpful assistant that uses all available tools to answer questions accurately." },
         { "user",
             $$"""
-            Current timestamp is {{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}}.
-
             Please answer the following questions using the appropriate tools:
             1. What is today's date? (use get_date tool)
-            2. What is the current price of Tesla (TSLA) stock? (use Yahoo news web search)
-            3. Calculate the earnings that would be produced by compound interest to $5k at 4% annually for 5 years (use code interpreter)
-            4. What is the latest release version of the {{ThisAssembly.Git.Url}} repository? (use GitHub MCP tool)
+            2. What is the current price of Tesla (TSLA) stock? (use Yahoo news web search, always include citations)
+            3. What is the top news from Tesla on X?
+            4. Calculate the earnings that would be produced by compound interest to $5k savings at 4% annually for 5 years (use code interpreter). 
+               Return just the earnings, not the grand total of savings plus earnings).
+            5. What is the latest release version of the {{ThisAssembly.Git.Url}} repository? (use GitHub MCP tool)
             
             Respond with a JSON object in this exact format:
             {
               "today": "[date from get_date in YYYY-MM-DD format]",
               "tesla_price": [numeric price from web search],
+              "tesla_news": "[top news from X]",
               "compound_interest": [numeric result from code interpreter],
               "latest_release": "[version string from GitHub]"
             }
@@ -215,33 +216,32 @@ public class SanityChecks(ITestOutputHelper output)
 
         var options = new GrokChatOptions
         {
+            ResponseFormat = ChatResponseFormat.Json,
             Include =
             [
                 IncludeOption.InlineCitations,
                 IncludeOption.WebSearchCallOutput,
                 IncludeOption.CodeExecutionCallOutput,
-                IncludeOption.McpCallOutput
+                IncludeOption.McpCallOutput,
+                IncludeOption.XSearchCallOutput,
             ],
             Tools =
             [
-                // Client-side tool
                 AIFunctionFactory.Create(() =>
                 {
                     getDateCalls++;
                     return DateTime.Now.ToString("yyyy-MM-dd");
                 }, "get_date", "Gets the current date in YYYY-MM-DD format"),
-
-                // Hosted web search tool
                 new HostedWebSearchTool(),
-
-                // Hosted code interpreter tool
                 new HostedCodeInterpreterTool(),
-
-                // Hosted MCP server tool (GitHub)
                 new HostedMcpServerTool("GitHub", "https://api.githubcopilot.com/mcp/")
                 {
                     AuthorizationToken = Environment.GetEnvironmentVariable("GITHUB_TOKEN")!,
                     AllowedTools = ["list_releases", "get_release_by_tag"],
+                },
+                new GrokXSearchTool
+                {
+                    AllowedHandles = ["tesla"]
                 }
             ]
         };
@@ -339,6 +339,10 @@ public class SanityChecks(ITestOutputHelper output)
 
             output.WriteLine($"Parsed response: Today={result.Today}, TeslaPrice={result.TeslaPrice}, CompoundInterest={result.CompoundInterest}, LatestRelease={result.LatestRelease}");
         }
+        else
+        {
+            Assert.Fail("Response did not contain expected JSON output");
+        }
 
         output.WriteLine($"Code interpreter calls: {codeInterpreterCalls.Count}");
         output.WriteLine($"MCP calls: {mcpCalls.Count}");
@@ -347,6 +351,7 @@ public class SanityChecks(ITestOutputHelper output)
     record IntegrationTestResponse(
         string Today,
         decimal TeslaPrice,
+        string TeslaNews,
         decimal CompoundInterest,
         string LatestRelease);
 }
