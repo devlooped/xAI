@@ -94,8 +94,10 @@ class GrokChatClient : IChatClient
 
                 ((List<AIContent>)update.Contents).AddRange(output.Delta.ToolCalls.AsContents(text, citations));
 
-                if (update.Contents.Any())
-                    yield return update;
+                if (MapToUsage(chunk.Usage) is { } usage)
+                    update.Contents.Add(new UsageContent(usage) { RawRepresentation = chunk.Usage });
+
+                yield return update;
             }
         }
     }
@@ -277,6 +279,8 @@ class GrokChatClient : IChatClient
     {
         InputTokenCount = usage.PromptTokens,
         OutputTokenCount = usage.CompletionTokens,
+        CachedInputTokenCount = usage.CachedPromptTextTokens,
+        ReasoningTokenCount = usage.ReasoningTokens,
         TotalTokenCount = usage.TotalTokens
     };
 
