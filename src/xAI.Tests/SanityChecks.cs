@@ -255,6 +255,7 @@ public class SanityChecks(ITestOutputHelper output)
         Assert.NotNull(response);
         Assert.NotNull(response.ModelId);
         Assert.NotEmpty(response.Messages);
+        Assert.NotNull(response.Usage);
 
         // Verify client-side tool was invoked
         Assert.True(getDateCalls() >= 1);
