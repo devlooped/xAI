@@ -1,15 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Linq;
+﻿using System.ComponentModel;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Threading.Tasks;
-using Google.Protobuf;
 using Microsoft.Extensions.AI;
 using xAI.Protocol;
-using static Google.Protobuf.Reflection.GeneratedCodeInfo.Types;
 
 namespace xAI;
 

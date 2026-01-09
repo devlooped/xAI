@@ -514,5 +514,11 @@ public class ChatClientTests(ITestOutputHelper output)
         Assert.Equal("Hey Cazzulino!", response.Text);
     }
 
+    [Fact]
+    public async Task AskFiles()
+    {
+
+    }
+
     record Response(DateOnly Today, string Release, decimal Price);
 }
