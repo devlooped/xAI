@@ -29,11 +29,21 @@ env:
   GH_TOKEN: ${{ secrets.GH_TOKEN }}
   MSBUILDTERMINALLOGGER: auto
   SLEET_FEED_URL: https://api.nuget.org/v3/index.json
-      
+
+permissions:
+  contents: write
+  id-token: write
+
 jobs:
   publish:
     runs-on: ${{ vars.PUBLISH_AGENT || 'ubuntu-latest' }}
     steps:
+      - name: 🔓 login
+        uses: NuGet/login@v1
+        id: login
+        with:
+          user: Devlooped
+
       - name: 🤘 checkout
         uses: actions/checkout@v4
         with: 
@@ -68,7 +78,7 @@ jobs:
           NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
         if: ${{ env.NUGET_API_KEY != '' && github.event.action != 'prereleased' }}
         working-directory: bin
-        run: dotnet nuget push *.nupkg -s https://api.nuget.org/v3/index.json -k ${{secrets.NUGET_API_KEY}} --skip-duplicate
+        run: dotnet nuget push *.nupkg -s https://api.nuget.org/v3/index.json -k ${{ steps.login.outputs.NUGET_API_KEY }} --skip-duplicate
 
       - name: 🚀 sleet
         env:
