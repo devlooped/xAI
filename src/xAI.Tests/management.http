@@ -1,0 +1,35 @@
+### List API keys
+GET https://management-api.x.ai/auth/teams/{{teamId}}/api-keys
+Authorization: Bearer {{token}}
+
+### List ACL values
+GET https://management-api.x.ai/auth/teams/{{teamId}}/endpoints
+Authorization: Bearer {{token}}
+
+### List models
+GET https://management-api.x.ai/auth/teams/{{teamId}}/models
+Authorization: Bearer {{token}}
+
+### Validate management key
+GET https://management-api.x.ai/auth/management-keys/validation
+Authorization: Bearer {{token}}
+
+### Create API key
+POST https://management-api.x.ai/auth/teams/{{teamId}}/api-keys
+Authorization: Bearer {{token}}
+
+  {
+    "name": "kzu-user",
+    "acls": [
+      "api-key:endpoint:*",
+      "api-key:model:*"
+    ]
+  }
+
+### Check API Key
+GET https://management-api.x.ai/auth/api-keys/{{userKeyId}}/propagation
+Authorization: Bearer {{token}}
+
+### Delete the key
+DELETE https://management-api.x.ai/auth/api-keys/{{userKeyId}}
+Authorization: Bearer {{token}}
