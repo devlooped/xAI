@@ -359,6 +359,7 @@ Sample Grok CLI client based on the xAI
 ![](https://raw.githubusercontent.com/devlooped/xAI/main/assets/img/cli.png)
 
 Uses your own API Key.
+<!-- #cli -->
 
 <!-- include https://github.com/devlooped/sponsors/raw/main/footer.md -->
 # Sponsors 
