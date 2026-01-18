@@ -75,6 +75,22 @@ public static partial class GrokProtocolExtensions
                         EnableImageUnderstanding = grokSearch.EnableImageUnderstanding,
                     };
 
+                    if (grokSearch.Country is not null ||
+                        grokSearch.Region is not null ||
+                        grokSearch.City is not null ||
+                        grokSearch.Timezone is not null)
+                    {
+                        websearch.UserLocation = new WebSearchUserLocation();
+                        if (grokSearch.Country is not null)
+                            websearch.UserLocation.Country = grokSearch.Country;
+                        if (grokSearch.Region is not null)
+                            websearch.UserLocation.Region = grokSearch.Region;
+                        if (grokSearch.City is not null)
+                            websearch.UserLocation.City = grokSearch.City;
+                        if (grokSearch.Timezone is not null)
+                            websearch.UserLocation.Timezone = grokSearch.Timezone;
+                    }
+
                     if (grokSearch.AllowedDomains is { Count: > 0 } &&
                         grokSearch.ExcludedDomains is { Count: > 0 })
                         throw new NotSupportedException($"Cannot use {nameof(GrokSearchTool.AllowedDomains)} and {nameof(GrokSearchTool.ExcludedDomains)} together in the same request.");

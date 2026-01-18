@@ -75,6 +75,57 @@ public class GrokConversionTests
     }
 
     [Fact]
+    public void AsTool_WithWebSearch_UserLocation()
+    {
+        var webSearch = new GrokSearchTool
+        {
+            Country = "US",
+            Region = "California",
+            City = "San Francisco",
+            Timezone = "America/Los_Angeles"
+        };
+
+        var tool = webSearch.AsProtocolTool();
+
+        Assert.NotNull(tool?.WebSearch);
+        Assert.NotNull(tool.WebSearch.UserLocation);
+        Assert.Equal("US", tool.WebSearch.UserLocation.Country);
+        Assert.Equal("California", tool.WebSearch.UserLocation.Region);
+        Assert.Equal("San Francisco", tool.WebSearch.UserLocation.City);
+        Assert.Equal("America/Los_Angeles", tool.WebSearch.UserLocation.Timezone);
+    }
+
+    [Fact]
+    public void AsTool_WithWebSearch_UserLocation_PartialFields()
+    {
+        var webSearch = new GrokSearchTool
+        {
+            Country = "DE",
+            City = "Berlin"
+        };
+
+        var tool = webSearch.AsProtocolTool();
+
+        Assert.NotNull(tool?.WebSearch);
+        Assert.NotNull(tool.WebSearch.UserLocation);
+        Assert.Equal("DE", tool.WebSearch.UserLocation.Country);
+        Assert.Equal("Berlin", tool.WebSearch.UserLocation.City);
+        Assert.Empty(tool.WebSearch.UserLocation.Region);
+        Assert.Empty(tool.WebSearch.UserLocation.Timezone);
+    }
+
+    [Fact]
+    public void AsTool_WithWebSearch_NoUserLocation()
+    {
+        var webSearch = new GrokSearchTool();
+
+        var tool = webSearch.AsProtocolTool();
+
+        Assert.NotNull(tool?.WebSearch);
+        Assert.Null(tool.WebSearch.UserLocation);
+    }
+
+    [Fact]
     public void AsTool_WithXSearch_ThrowsIfAllowedAndExcluded()
     {
         var webSearch = new GrokXSearchTool

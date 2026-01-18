@@ -173,6 +173,32 @@ public class ChatClientTests(ITestOutputHelper output)
     }
 
     [SecretsFact("XAI_API_KEY")]
+    public async Task GrokInvokesHostedSearchWithCity()
+    {
+        var messages = new Chat()
+        {
+            { "system", "You are an assistant that uses web search to respond" },
+            { "user", "Que se puede hacer en el verano por la zona? Lo mas popular?" },
+        };
+
+        var grok = new GrokClient(Configuration["XAI_API_KEY"]!).AsIChatClient("grok-4-fast");
+
+        var options = new GrokChatOptions
+        {
+            Include = [IncludeOption.WebSearchCallOutput],
+            Tools = [new GrokSearchTool {
+                Country = "AR",
+                City = "Concepcion del Uruguay"
+            }]
+        };
+
+        var response = await grok.GetResponseAsync(messages, options);
+        var text = response.Text;
+
+        Assert.Contains("termas", text, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [SecretsFact("XAI_API_KEY")]
     public async Task GrokInvokesGrokSearchToolIncludesDomain()
     {
         var messages = new Chat()
