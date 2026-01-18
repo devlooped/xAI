@@ -27,6 +27,5 @@ public class GrokChatOptions : ChatOptions
     public GrokSearch Search { get; set; } = GrokSearch.None;
 
     /// <summary>Additional outputs to include in responses.</summary>
-    /// <remarks>Defaults to including <see cref="IncludeOption.InlineCitations"/>.</remarks>
-    public IList<IncludeOption> Include { get; set; } = [IncludeOption.InlineCitations];
+    public IList<IncludeOption> Include { get; set; } = [];
 }

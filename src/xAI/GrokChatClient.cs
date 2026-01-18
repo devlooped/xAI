@@ -134,8 +134,6 @@ class GrokChatClient : IChatClient
     {
         var request = options?.RawRepresentationFactory?.Invoke(this) as GetCompletionsRequest ?? new GetCompletionsRequest()
         {
-            // By default always include citations in the final output if available
-            Include = { IncludeOption.InlineCitations },
             Model = options?.ModelId ?? defaultModelId,
         };
 
@@ -220,11 +218,9 @@ class GrokChatClient : IChatClient
             request.Messages.Add(gmsg);
         }
 
-        IList<IncludeOption> includes = [IncludeOption.InlineCitations];
+        IList<IncludeOption> includes = [];
         if (options is GrokChatOptions grokOptions)
         {
-            // NOTE: overrides our default include for inline citations, potentially.
-            request.Include.Clear();
             request.Include.AddRange(grokOptions.Include);
 
             if (grokOptions.Search.HasFlag(GrokSearch.X))
