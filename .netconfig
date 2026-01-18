@@ -40,8 +40,8 @@
 	weak
 [file ".github/workflows/build.yml"]
 	url = https://github.com/devlooped/oss/blob/main/.github/workflows/build.yml
-	sha = 7f5f9ee9f362f7e8f951d618f8f799033550e687
-	etag = a04ce46114292f5c0e76bc1f260381b174c93d6f264749dfacbfc892238bec73
+	sha = 5da103cfbc1c4f9b5f59cfa698d2afbd744a7525
+	etag = 851af098748f7cfa5bc3cfd4cc404a6de930532b59ceb2b3b535282c41226f3a
 	weak
 [file ".github/workflows/changelog.config"]
 	url = https://github.com/devlooped/oss/blob/main/.github/workflows/changelog.config
@@ -127,8 +127,8 @@
 	weak
 [file "src/xAI.Protocol/chat.proto"]
 	url = https://github.com/xai-org/xai-proto/blob/main/proto/xai/api/v1/chat.proto
-	sha = f6d4d709515fd666ebeb7dfcb89bd50e58c859d9
-	etag = a3ef7183a220c08fd57b7a197090a6a8e6e89028e0477184bf73e61b4b7da6ff
+	sha = 7dc7323e9c7dbbeced78e55fe913c6589079a771
+	etag = 225d09e19a7d307da09eb962acfdbbe880d59b5ee54e5cbf10df989e5ac3581d
 	weak
 [file "src/xAI.Protocol/deferred.proto"]
 	url = https://github.com/xai-org/xai-proto/blob/main/proto/xai/api/v1/deferred.proto
