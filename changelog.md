@@ -1,8 +1,12 @@
 # Changelog
 
-## [v1.0.3-preview.1](https://github.com/devlooped/xAI/tree/v1.0.3-preview.1) (2026-01-09)
+## [v2.0.0](https://github.com/devlooped/xAI/tree/v2.0.0) (2026-01-17)
 
-[Full Changelog](https://github.com/devlooped/xAI/compare/v1.0.2...v1.0.3-preview.1)
+[Full Changelog](https://github.com/devlooped/xAI/compare/v1.0.2...v2.0.0)
+
+:twisted_rightwards_arrows: Merged:
+
+- Fix duplicate Sponsors section in grok package readme [\#60](https://github.com/devlooped/xAI/pull/60) (@Copilot)
 
 ## [v1.0.2](https://github.com/devlooped/xAI/tree/v1.0.2) (2026-01-09)
 
