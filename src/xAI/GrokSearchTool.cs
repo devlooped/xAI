@@ -20,4 +20,16 @@ public class GrokSearchTool : HostedWebSearchTool
 
     /// <summary>See https://docs.x.ai/docs/guides/tools/search-tools#enable-image-understanding</summary>
     public bool EnableImageUnderstanding { get; set; }
+
+    /// <summary>Sets the user's country for web search results, using the ISO alpha-2 code.</summary>
+    public string? Country { get; set; }
+
+    /// <summary>Additional free text information about the region to be used in the search.</summary>
+    public string? Region { get; set; }
+
+    /// <summary>Additional free text information about the city to be used in the search.</summary>
+    public string? City { get; set; }
+
+    /// <summary>IANA timezone name to be used in the search.</summary>
+    public string? Timezone { get; set; }
 }
