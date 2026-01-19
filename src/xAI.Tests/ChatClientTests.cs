@@ -2,6 +2,7 @@
 using System.Text.Json.Nodes;
 using Azure;
 using Devlooped.Extensions.AI;
+using Grpc.Core;
 using Microsoft.Extensions.AI;
 using Moq;
 using Tests.Client.Helpers;
@@ -518,6 +519,82 @@ public class ChatClientTests(ITestOutputHelper output)
     public async Task AskFiles()
     {
 
+    }
+
+    [Fact]
+    public async Task GrokSetsToolCallIdFromFunctionResultContent()
+    {
+        GetCompletionsRequest? capturedRequest = null;
+        var client = new Mock<xAI.Protocol.Chat.ChatClient>(MockBehavior.Strict);
+        client.Setup(x => x.GetCompletionAsync(It.IsAny<GetCompletionsRequest>(), null, null, CancellationToken.None))
+            .Callback<GetCompletionsRequest, Metadata?, DateTime?, CancellationToken>((req, _, _, _) => capturedRequest = req)
+            .Returns(CallHelpers.CreateAsyncUnaryCall(new GetChatCompletionResponse
+            {
+                Outputs =
+                {
+                    new CompletionOutput
+                    {
+                        Message = new CompletionMessage
+                        {
+                            Content = "Done"
+                        }
+                    }
+                }
+            }));
+
+        var grok = new GrokChatClient(client.Object, "grok-4-1-fast");
+        var messages = new List<ChatMessage>
+        {
+            new(ChatRole.User, "What's the time?"),
+            new(ChatRole.Assistant, [new FunctionCallContent("call-123", "get_time")]),
+            new(ChatRole.Tool, [new FunctionResultContent("call-123", "2024-01-01T00:00:00Z")]),
+        };
+
+        await grok.GetResponseAsync(messages);
+
+        Assert.NotNull(capturedRequest);
+        var toolMessage = capturedRequest.Messages.FirstOrDefault(m => m.Role == MessageRole.RoleTool);
+        Assert.NotNull(toolMessage);
+        Assert.Equal("call-123", toolMessage.ToolCallId);
+    }
+
+    [Fact]
+    public async Task GrokSetsToolCallIdOnlyWhenCallIdIsProvided()
+    {
+        GetCompletionsRequest? capturedRequest = null;
+        var client = new Mock<xAI.Protocol.Chat.ChatClient>(MockBehavior.Strict);
+        client.Setup(x => x.GetCompletionAsync(It.IsAny<GetCompletionsRequest>(), null, null, CancellationToken.None))
+            .Callback<GetCompletionsRequest, Metadata?, DateTime?, CancellationToken>((req, _, _, _) => capturedRequest = req)
+            .Returns(CallHelpers.CreateAsyncUnaryCall(new GetChatCompletionResponse
+            {
+                Outputs =
+                {
+                    new CompletionOutput
+                    {
+                        Message = new CompletionMessage
+                        {
+                            Content = "Done"
+                        }
+                    }
+                }
+            }));
+
+        var grok = new GrokChatClient(client.Object, "grok-4-1-fast");
+        var messages = new List<ChatMessage>
+        {
+            new(ChatRole.User, "What's the time?"),
+            new(ChatRole.Assistant, [new FunctionCallContent("call-456", "get_time")]),
+            // FunctionResultContent with empty CallId
+            new(ChatRole.Tool, [new FunctionResultContent("", "2024-01-01T00:00:00Z")]),
+        };
+
+        await grok.GetResponseAsync(messages);
+
+        Assert.NotNull(capturedRequest);
+        var toolMessage = capturedRequest.Messages.FirstOrDefault(m => m.Role == MessageRole.RoleTool);
+        Assert.NotNull(toolMessage);
+        // ToolCallId should not be set if CallId is empty
+        Assert.False(toolMessage.HasToolCallId);
     }
 
     record Response(DateOnly Today, string Release, decimal Price);
