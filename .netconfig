@@ -127,8 +127,8 @@
 	weak
 [file "src/xAI.Protocol/chat.proto"]
 	url = https://github.com/xai-org/xai-proto/blob/main/proto/xai/api/v1/chat.proto
-	sha = 803611f00c8631d6ef1064fd95b9943a9e9c87ca
-	etag = 21449b3c69cebfdecd26ec6ae1e67e73b7a2155407cf5403b2aef19377bba238
+	sha = 712e28ae9319e881d6dd6473d22566d61fe22854
+	etag = d68802a822549776b7acdc0c03a226c913375f588a7938b48741ea5d1852ef02
 	weak
 [file "src/xAI.Protocol/deferred.proto"]
 	url = https://github.com/xai-org/xai-proto/blob/main/proto/xai/api/v1/deferred.proto
