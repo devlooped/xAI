@@ -176,11 +176,14 @@ class GrokChatClient : IChatClient
                 }
                 else if (content is FunctionResultContent resultContent)
                 {
-                    request.Messages.Add(new Message
+                    var msg = new Message
                     {
                         Role = MessageRole.RoleTool,
                         Content = { new Content { Text = JsonSerializer.Serialize(resultContent.Result) ?? "null" } }
-                    });
+                    };
+                    if (resultContent.CallId is { Length: > 0 } callId)
+                        msg.ToolCallId = callId;
+                    request.Messages.Add(msg);
                 }
                 else if (content is McpServerToolResultContent mcpResult &&
                     mcpResult.RawRepresentation is ToolCall mcpToolCall &&
