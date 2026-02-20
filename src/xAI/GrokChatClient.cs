@@ -157,6 +157,14 @@ class GrokChatClient : IChatClient
                 {
                     gmsg.Content.Add(new Content { Text = textContent.Text });
                 }
+                else if (content is DataContent dataContent && dataContent.HasTopLevelMediaType("image"))
+                {
+                    gmsg.Content.Add(new Content { ImageUrl = new ImageUrlContent { ImageUrl = $"data:{dataContent.MediaType};base64,{Convert.ToBase64String(dataContent.Data.Span)}" } });
+                }
+                else if (content is UriContent uriContent && uriContent.HasTopLevelMediaType("image"))
+                {
+                    gmsg.Content.Add(new Content { ImageUrl = new ImageUrlContent { ImageUrl = uriContent.Uri.ToString() } });
+                }
                 else if (content.RawRepresentation is ToolCall toolCall)
                 {
                     gmsg.ToolCalls.Add(toolCall);
