@@ -11,7 +11,7 @@ public class ImageGeneratorTests(ITestOutputHelper output)
     public async Task GenerateImage_WithPrompt_ReturnsImageContent()
     {
         var imageGenerator = new GrokClient(Configuration["XAI_API_KEY"]!)
-            .AsIImageGenerator("grok-imagine-image-beta");
+            .AsIImageGenerator("grok-imagine-image");
 
         var request = new ImageGenerationRequest("A cat sitting on a tree branch");
         var options = new ImageGenerationOptions
@@ -38,7 +38,7 @@ public class ImageGeneratorTests(ITestOutputHelper output)
     public async Task GenerateImage_WithEditsToPreviousImage()
     {
         var imageGenerator = new GrokClient(Configuration["XAI_API_KEY"]!)
-            .AsIImageGenerator("grok-imagine-image-beta");
+            .AsIImageGenerator("grok-imagine-image");
 
         var request = new ImageGenerationRequest("A cat sitting on a tree branch");
         var options = new ImageGenerationOptions
@@ -55,7 +55,7 @@ public class ImageGeneratorTests(ITestOutputHelper output)
         Assert.Single(response.Contents);
         var image = Assert.IsType<UriContent>(response.Contents.First());
         // media type in options is ignored and you always get the same jpg
-        Assert.Equal("image/jpg", image.MediaType);
+        Assert.Equal("image/jpeg", image.MediaType);
         output.WriteLine($"Generated image URL: {image.Uri}");
 
         var edit = await imageGenerator.GenerateAsync(new ImageGenerationRequest("Edit provided image by adding a batman mask", [image]), options);
@@ -65,7 +65,7 @@ public class ImageGeneratorTests(ITestOutputHelper output)
         Assert.Single(edit.Contents);
         image = Assert.IsType<UriContent>(edit.Contents.First());
         // media type in options is ignored and you always get the same jpg
-        Assert.Equal("image/jpg", image.MediaType);
+        Assert.Equal("image/jpeg", image.MediaType);
 
         output.WriteLine($"Edited image URL: {image.Uri}");
     }
@@ -74,7 +74,7 @@ public class ImageGeneratorTests(ITestOutputHelper output)
     public async Task GenerateImage_WithBase64Response_ReturnsDataContent()
     {
         var imageGenerator = new GrokClient(Configuration["XAI_API_KEY"]!)
-            .AsIImageGenerator("grok-imagine-image-beta");
+            .AsIImageGenerator("grok-imagine-image");
 
         var request = new ImageGenerationRequest("A sunset over mountains");
         var options = new ImageGenerationOptions
@@ -103,7 +103,7 @@ public class ImageGeneratorTests(ITestOutputHelper output)
     public async Task GenerateImage_DefaultsToUriContent()
     {
         var imageGenerator = new GrokClient(Configuration["XAI_API_KEY"]!)
-            .AsIImageGenerator("grok-imagine-image-beta");
+            .AsIImageGenerator("grok-imagine-image");
 
         var request = new ImageGenerationRequest("A sunset over mountains");
         var response = await imageGenerator.GenerateAsync(request);
@@ -119,7 +119,7 @@ public class ImageGeneratorTests(ITestOutputHelper output)
     public async Task GenerateMultipleImages_ReturnsCorrectCount()
     {
         var imageGenerator = new GrokClient(Configuration["XAI_API_KEY"]!)
-            .AsIImageGenerator("grok-2-image");
+            .AsIImageGenerator("grok-imagine-image");
 
         var request = new ImageGenerationRequest("A robot reading a book");
         var options = new ImageGenerationOptions
@@ -145,7 +145,7 @@ public class ImageGeneratorTests(ITestOutputHelper output)
     public async Task GenerateImage_ResponseContainsRawRepresentation()
     {
         var imageGenerator = new GrokClient(Configuration["XAI_API_KEY"]!)
-            .AsIImageGenerator("grok-2-image");
+            .AsIImageGenerator("grok-imagine-image");
 
         var request = new ImageGenerationRequest("A futuristic cityscape");
         var options = new ImageGenerationOptions
@@ -168,7 +168,7 @@ public class ImageGeneratorTests(ITestOutputHelper output)
     public async Task GenerateImage_WithNullRequest_ThrowsArgumentNullException()
     {
         var imageGenerator = new GrokClient("test-api-key")
-            .AsIImageGenerator("grok-2-image");
+            .AsIImageGenerator("grok-imagine-image");
 
         await Assert.ThrowsAsync<ArgumentNullException>(
             async () => await imageGenerator.GenerateAsync(null!, null));
@@ -178,7 +178,7 @@ public class ImageGeneratorTests(ITestOutputHelper output)
     public async Task GenerateImage_WithNullPrompt_ThrowsArgumentNullException()
     {
         var imageGenerator = new GrokClient("test-api-key")
-            .AsIImageGenerator("grok-2-image");
+            .AsIImageGenerator("grok-imagine-image");
 
         var request = new ImageGenerationRequest(null!);
 
@@ -190,12 +190,12 @@ public class ImageGeneratorTests(ITestOutputHelper output)
     public void GetService_ReturnsImageGeneratorMetadata()
     {
         var imageGenerator = new GrokClient("test-api-key")
-            .AsIImageGenerator("grok-2-image");
+            .AsIImageGenerator("grok-imagine-image");
 
         var metadata = imageGenerator.GetService<ImageGeneratorMetadata>();
 
         Assert.NotNull(metadata);
         Assert.Equal("xai", metadata.ProviderName);
-        Assert.Equal("grok-2-image", metadata.DefaultModelId);
+        Assert.Equal("grok-imagine-image", metadata.DefaultModelId);
     }
 }

@@ -125,9 +125,19 @@ sealed class GrokImageGenerator : IImageGenerator
             {
                 case GeneratedImage.ImageOneofCase.Base64:
                     {
-                        // We assume JPEG since there's no way to get the actual content type.
-                        var imageBytes = Convert.FromBase64String(image.Base64);
-                        contents.Add(new DataContent(imageBytes, contentType));
+                        try
+                        {
+                            // RTW grok-imagine-image uses full data URI, so 
+                            // this first try should work.
+                            contents.Add(new DataContent(image.Base64));
+                        }
+                        catch (Exception)
+                        {
+                            // Fallback to attemping to parse as raw base64 string from beta and grok2 model.
+                            // We assume JPEG since there's no way to get the actual content type.
+                            var imageBytes = Convert.FromBase64String(image.Base64);
+                            contents.Add(new DataContent(imageBytes, contentType));
+                        }
                         break;
                     }
                 case GeneratedImage.ImageOneofCase.Url:
