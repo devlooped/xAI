@@ -597,5 +597,79 @@ public class ChatClientTests(ITestOutputHelper output)
         Assert.False(toolMessage.HasToolCallId);
     }
 
+    [Fact]
+    public async Task GrokSendsDataContentAsBase64ImageUrl()
+    {
+        GetCompletionsRequest? capturedRequest = null;
+        var client = new Mock<xAI.Protocol.Chat.ChatClient>(MockBehavior.Strict);
+        client.Setup(x => x.GetCompletionAsync(It.IsAny<GetCompletionsRequest>(), null, null, CancellationToken.None))
+            .Callback<GetCompletionsRequest, Metadata?, DateTime?, CancellationToken>((req, _, _, _) => capturedRequest = req)
+            .Returns(CallHelpers.CreateAsyncUnaryCall(new GetChatCompletionResponse
+            {
+                Outputs =
+                {
+                    new CompletionOutput
+                    {
+                        Message = new CompletionMessage { Content = "I see an image." }
+                    }
+                }
+            }));
+
+        var imageBytes = new byte[] { 1, 2, 3, 4, 5 };
+        var grok = new GrokChatClient(client.Object, "grok-4-1-fast");
+        var messages = new List<ChatMessage>
+        {
+            new(ChatRole.User, [new TextContent("What do you see?"), new DataContent(imageBytes, "image/png")]),
+        };
+
+        await grok.GetResponseAsync(messages);
+
+        Assert.NotNull(capturedRequest);
+        var userMessage = capturedRequest.Messages.FirstOrDefault(m => m.Role == MessageRole.RoleUser);
+        Assert.NotNull(userMessage);
+        Assert.Equal(2, userMessage.Content.Count);
+        Assert.Equal("What do you see?", userMessage.Content[0].Text);
+        var imageContent = userMessage.Content[1].ImageUrl;
+        Assert.NotNull(imageContent);
+        Assert.Equal($"data:image/png;base64,{Convert.ToBase64String(imageBytes)}", imageContent.ImageUrl);
+    }
+
+    [Fact]
+    public async Task GrokSendsUriContentAsImageUrl()
+    {
+        GetCompletionsRequest? capturedRequest = null;
+        var client = new Mock<xAI.Protocol.Chat.ChatClient>(MockBehavior.Strict);
+        client.Setup(x => x.GetCompletionAsync(It.IsAny<GetCompletionsRequest>(), null, null, CancellationToken.None))
+            .Callback<GetCompletionsRequest, Metadata?, DateTime?, CancellationToken>((req, _, _, _) => capturedRequest = req)
+            .Returns(CallHelpers.CreateAsyncUnaryCall(new GetChatCompletionResponse
+            {
+                Outputs =
+                {
+                    new CompletionOutput
+                    {
+                        Message = new CompletionMessage { Content = "I see an image." }
+                    }
+                }
+            }));
+
+        var imageUri = new Uri("https://example.com/photo.jpg");
+        var grok = new GrokChatClient(client.Object, "grok-4-1-fast");
+        var messages = new List<ChatMessage>
+        {
+            new(ChatRole.User, [new TextContent("What do you see?"), new UriContent(imageUri, "image/jpeg")]),
+        };
+
+        await grok.GetResponseAsync(messages);
+
+        Assert.NotNull(capturedRequest);
+        var userMessage = capturedRequest.Messages.FirstOrDefault(m => m.Role == MessageRole.RoleUser);
+        Assert.NotNull(userMessage);
+        Assert.Equal(2, userMessage.Content.Count);
+        Assert.Equal("What do you see?", userMessage.Content[0].Text);
+        var imageContent = userMessage.Content[1].ImageUrl;
+        Assert.NotNull(imageContent);
+        Assert.Equal(imageUri.ToString(), imageContent.ImageUrl);
+    }
+
     record Response(DateOnly Today, string Release, decimal Price);
 }
