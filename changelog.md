@@ -1,5 +1,23 @@
 # Changelog
 
+## [v2.0.1](https://github.com/devlooped/xAI/tree/v2.0.1) (2026-02-20)
+
+[Full Changelog](https://github.com/devlooped/xAI/compare/v2.0.0...v2.0.1)
+
+:sparkles: Implemented enhancements:
+
+- Support DataContent and UriContent \(images\) in GrokChatClient messages [\#76](https://github.com/devlooped/xAI/pull/76) (@Copilot)
+- Don't force inline citations by default [\#61](https://github.com/devlooped/xAI/pull/61) (@kzu)
+
+:bug: Fixed bugs:
+
+- GrokChatClient fails to send images \(DataContent\) [\#72](https://github.com/devlooped/xAI/issues/72)
+- Fix support for Imagine v1.0 base64 content [\#75](https://github.com/devlooped/xAI/pull/75) (@kzu)
+
+:twisted_rightwards_arrows: Merged:
+
+- Consume tool\_call\_id in Message proto for FunctionResultContent [\#64](https://github.com/devlooped/xAI/pull/64) (@Copilot)
+
 ## [v2.0.0](https://github.com/devlooped/xAI/tree/v2.0.0) (2026-01-17)
 
 [Full Changelog](https://github.com/devlooped/xAI/compare/v1.0.2...v2.0.0)
