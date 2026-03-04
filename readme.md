@@ -278,6 +278,31 @@ var image = (UriContent)response.Contents.First();
 Console.WriteLine($"Generated image URL: {image.Uri}");
 ```
 
+### Grok-Specific Options
+
+Use `GrokImageGenerationOptions` to control aspect ratio and resolution — features 
+unique to grok-imagine models:
+
+```csharp
+var imageGenerator = new GrokClient(Environment.GetEnvironmentVariable("XAI_API_KEY")!)
+    .AsIImageGenerator("grok-imagine-image-beta");
+
+var request = new ImageGenerationRequest("A futuristic cityscape at sunset");
+var options = new GrokImageGenerationOptions
+{
+    ResponseFormat = ImageGenerationResponseFormat.Uri,
+    AspectRatio = ImageAspectRatio.ImgAspectRatio16_9,
+    Resolution = ImageResolution.ImgResolution2K,
+};
+
+var response = await imageGenerator.GenerateAsync(request, options);
+var image = (UriContent)response.Contents.First();
+Console.WriteLine($"Generated image URL: {image.Uri}");
+```
+
+Aspect ratio defaults to 1:1 and resolution defaults to 1k when not specified.
+2k output is generated at 1k and then upscaled with super-resolution.
+
 ### Editing Images
 
 You can also edit previously generated images by passing them as input to a new 
@@ -304,6 +329,33 @@ var edit = await imageGenerator.GenerateAsync(
     options);
 
 var editedImage = (UriContent)edit.Contents.First();
+Console.WriteLine($"Edited image URL: {editedImage.Uri}");
+```
+
+### Multi-Image Editing
+
+When two or more reference images are provided, Grok uses all of them together as 
+editing inputs — useful for style transfer, composition, or blending scenes:
+
+```csharp
+var imageGenerator = new GrokClient(Environment.GetEnvironmentVariable("XAI_API_KEY")!)
+    .AsIImageGenerator("grok-imagine-image-beta");
+
+var options = new ImageGenerationOptions { ResponseFormat = ImageGenerationResponseFormat.Uri };
+
+// Generate two source images
+var cat = (UriContent)(await imageGenerator.GenerateAsync(
+    new ImageGenerationRequest("A tabby cat on a sunny porch"), options)).Contents.First();
+
+var background = (UriContent)(await imageGenerator.GenerateAsync(
+    new ImageGenerationRequest("A moonlit forest clearing"), options)).Contents.First();
+
+// Blend both images into a single edited result
+var result = await imageGenerator.GenerateAsync(
+    new ImageGenerationRequest("Place the cat from the first image into the forest scene from the second image", [cat, background]),
+    options);
+
+var editedImage = (UriContent)result.Contents.First();
 Console.WriteLine($"Edited image URL: {editedImage.Uri}");
 ```
 
