@@ -69,29 +69,27 @@ sealed class GrokImageGenerator : IImageGenerator
             _ => throw new ArgumentException($"Unsupported response format: {options?.ResponseFormat}", nameof(options))
         };
 
-        // Handle image editing if original images are provided
-        if (request.OriginalImages?.FirstOrDefault() is { } originalImage)
+        if (options is GrokImageGenerationOptions grokOptions)
         {
-            if (originalImage is DataContent dataContent)
-            {
-                var imageUrl = dataContent.Uri?.ToString();
-                if (imageUrl == null && dataContent.Data.Length > 0)
-                    imageUrl = $"data:{dataContent.MediaType ?? DefaultInputContentType};base64,{Convert.ToBase64String(dataContent.Data.ToArray())}";
+            if (grokOptions.AspectRatio is { } aspectRatio) protocolRequest.AspectRatio = aspectRatio;
+            if (grokOptions.Resolution is { } resolution) protocolRequest.Resolution = resolution;
+        }
 
-                if (imageUrl != null)
-                {
-                    protocolRequest.Image = new ImageUrlContent
-                    {
-                        ImageUrl = imageUrl
-                    };
-                }
-            }
-            else if (originalImage is UriContent uriContent)
+        // Handle image editing if original images are provided
+        if (request.OriginalImages?.ToList() is { Count: > 0 } originalImages)
+        {
+            if (originalImages.Count == 1)
             {
-                protocolRequest.Image = new ImageUrlContent
+                if (MapToImageUrlContent(originalImages[0]) is { } image)
+                    protocolRequest.Image = image;
+            }
+            else
+            {
+                foreach (var originalImage in originalImages)
                 {
-                    ImageUrl = uriContent.Uri.ToString()
-                };
+                    if (MapToImageUrlContent(originalImage) is { } image)
+                        protocolRequest.Images.Add(image);
+                }
             }
         }
 
@@ -156,6 +154,33 @@ sealed class GrokImageGenerator : IImageGenerator
         return new ImageGenerationResponse(contents)
         {
             RawRepresentation = response,
+            Usage = MapToUsage(response.Usage),
         };
     }
+
+    static ImageUrlContent? MapToImageUrlContent(AIContent content) => content switch
+    {
+        DataContent dataContent => MapToImageUrlContent(dataContent),
+        UriContent uriContent => new ImageUrlContent { ImageUrl = uriContent.Uri.ToString() },
+        _ => throw new ArgumentException($"Unsupported original image content type: {content.GetType()}", nameof(content)),
+    };
+
+    static ImageUrlContent? MapToImageUrlContent(DataContent dataContent)
+    {
+        var imageUrl = dataContent.Uri?.ToString();
+        if (imageUrl == null && dataContent.Data.Length > 0)
+            imageUrl = $"data:{dataContent.MediaType ?? DefaultInputContentType};base64,{Convert.ToBase64String(dataContent.Data.ToArray())}";
+
+        return imageUrl == null ? null : new ImageUrlContent
+        {
+            ImageUrl = imageUrl
+        };
+    }
+
+    static UsageDetails? MapToUsage(SamplingUsage usage) => usage == null ? null : new()
+    {
+        InputTokenCount = usage.PromptTokens,
+        OutputTokenCount = usage.CompletionTokens,
+        TotalTokenCount = usage.TotalTokens
+    };
 }
