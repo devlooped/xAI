@@ -38,12 +38,6 @@ jobs:
   publish:
     runs-on: ${{ vars.PUBLISH_AGENT || 'ubuntu-latest' }}
     steps:
-      - name: 🔓 login
-        uses: NuGet/login@v1
-        id: login
-        with:
-          user: Devlooped
-
       - name: 🤘 checkout
         uses: actions/checkout@v4
         with: 
@@ -73,10 +67,15 @@ jobs:
           name: logs
           path: '*.binlog'
 
+      - name: 🔓 login
+        uses: NuGet/login@v1
+        id: login
+        if: ${{ vars.NUGET_OIDC }}
+        with:
+          user: ${{ vars.NUGET_OIDC }}
+
       - name: 🚀 nuget
-        env:
-          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
-        if: ${{ env.NUGET_API_KEY != '' && github.event.action != 'prereleased' }}
+        if: ${{ vars.NUGET_OIDC && github.event.action != 'prereleased' }}
         working-directory: bin
         run: dotnet nuget push *.nupkg -s https://api.nuget.org/v3/index.json -k ${{ steps.login.outputs.NUGET_API_KEY }} --skip-duplicate
 
