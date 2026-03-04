@@ -22,8 +22,11 @@ const string ns =
 
 /// <summary>Check and fix imports in .proto files.</summary>
 /// <para name="dir">Optional directory, defaults to current directory.</para>
-static int FixProto(bool dryRun, [Argument] string? dir = default)
+static int FixProto(bool dryRun, bool debug, [Argument] string? dir = default)
 {
+    if (debug)
+        System.Diagnostics.Debugger.Launch();
+
     dir ??= Directory.GetCurrentDirectory();
     var regex = ImportExpr();
     var result = 0;
@@ -42,11 +45,12 @@ static int FixProto(bool dryRun, [Argument] string? dir = default)
             {
                 var path = match.Groups[1].Value;
                 var baseDir = Path.GetDirectoryName(file)!;
-                if (File.Exists(Path.Combine(baseDir, path)))
+                if (File.Exists(Path.Combine(baseDir, path)) ||
+                    File.Exists(Path.Combine(dir, path)))
                 {
                     AnsiConsole.MarkupLine($":check_mark_button: {Path.GetRelativePath(dir, file)} [lime]{path}[/]");
                     continue;
-                }
+                } 
 
                 if (File.Exists(Path.Combine(baseDir, Path.GetFileName(path))))
                 {

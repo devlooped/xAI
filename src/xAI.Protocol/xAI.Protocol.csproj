@@ -27,6 +27,7 @@
     <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.3" />
     <None Include="..\..\osmfeula.txt" Link="osmfeula.txt" PackagePath="OSMFEULA.txt" />
     <Protobuf Include="*.proto" GrpcServices="Client" />
+    <Protobuf Include="google\rpc\status.proto" GrpcServices="Client" />
   </ItemGroup>
 
   <Target Name="FixProto" BeforeTargets="Protobuf_BeforeCompile">
