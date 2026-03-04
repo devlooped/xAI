@@ -120,10 +120,35 @@
 	weak
 [file "src/xAI.Protocol/."]
 	url = https://github.com/xai-org/xai-proto/tree/main/proto/xai/api/v1/
+[file "src/xAI.Tests/Extensions/Attributes.cs"]
+	url = https://github.com/devlooped/catbag/blob/main/Xunit/Attributes.cs
+	sha = 40914971d4d6b42d6f8a90923b131136f7e609a5
+	etag = c77e7b435ce1df06fb60a3b0e15a0833d8e45d4d19f366c6184140ebb4814b1a
+	weak
+[file "osmfeula.txt"]
+	url = https://github.com/devlooped/.github/blob/main/osmfeula.txt
+	sha = 666a2a7c315f72199c418f11482a950fc69a8901
+	etag = 91ea15c07bfd784036c6ca931f5b2df7e9767b8367146d96c79caef09d63899f
+	weak
+[file "src/xAI/Extensions/Throw.cs"]
+	url = https://github.com/devlooped/catbag/blob/main/System/Throw.cs
+	sha = 3012d56be7554c483e5c5d277144c063969cada9
+	etag = 43c81c6c6dcdf5baee40a9e3edc5e871e473e6c954c901b82bb87a3a48888ea0
+	weak
+[file "src/Grok/Extensions/AIContentExtensions.cs"]
+	url = https://github.com/dotnet/extensions/blob/main/src/Libraries/Microsoft.Extensions.AI.Abstractions/Contents/AIContentExtensions.cs
+	sha = c221abef4b4f1bf3fcf0bda27490e8b26bb479f4
+	etag = 510868eaae58941d71cdcb5416f44ebf4436a22d342ca5838172127b04252fe0
+	weak
 [file "src/xAI.Protocol/auth.proto"]
 	url = https://github.com/xai-org/xai-proto/blob/main/proto/xai/api/v1/auth.proto
 	sha = 626a3a3f22d8aa11c7a185bf8902e7d415df0462
 	etag = ea074da4f67b67ebf0e8a0b2114a1720d6b3176a8324aa1cfd22740e78049d80
+	weak
+[file "src/xAI.Protocol/batch.proto"]
+	url = https://github.com/xai-org/xai-proto/blob/main/proto/xai/api/v1/batch.proto
+	sha = 4724d8352feb7d4f13059c1bfd27ef0362f96684
+	etag = 49810c4625d4995815164f4a519f526768386bfaf43d05b346e7fcd5cbe55289
 	weak
 [file "src/xAI.Protocol/chat.proto"]
 	url = https://github.com/xai-org/xai-proto/blob/main/proto/xai/api/v1/chat.proto
@@ -147,8 +172,8 @@
 	weak
 [file "src/xAI.Protocol/image.proto"]
 	url = https://github.com/xai-org/xai-proto/blob/main/proto/xai/api/v1/image.proto
-	sha = 626a3a3f22d8aa11c7a185bf8902e7d415df0462
-	etag = 72140789ccabd84bb51e0120c4b86f78ffa03de324410887034c8c45684004c6
+	sha = d67bcf3e661aa9641af9750632fa1c38ea974da1
+	etag = 3ea27e240320c26d14b8c64d00f236c078127ebdb6fa957efc49232dfd75a20c
 	weak
 [file "src/xAI.Protocol/models.proto"]
 	url = https://github.com/xai-org/xai-proto/blob/main/proto/xai/api/v1/models.proto
@@ -170,6 +195,11 @@
 	sha = 362749661fa2d340d234ad372fab920538897821
 	etag = bd66823dfde1a2fff714d3712104bef886baf22da9f94c7505acee37d3ff67fd
 	weak
+[file "src/xAI.Protocol/video.proto"]
+	url = https://github.com/xai-org/xai-proto/blob/main/proto/xai/api/v1/video.proto
+	sha = 1813f69cd0fafba12eea98996cb6da15f29396b9
+	etag = 69bb5336a09ae73e22e5d1a8af2d65386953face7d0b57917478e56e1c2fc5c6
+	weak
 [file "src/xAI.Protocol/google/protobuf/timestamp.proto"]
 	url = https://github.com/protocolbuffers/protobuf/blob/main/src/google/protobuf/timestamp.proto
 	sha = 71f247a9cf5ddcd310d8aa5e05cea2acc72f9a7f
@@ -180,23 +210,13 @@
 	sha = 407aa2d9319f5db12964540810b446fecc22d419
 	etag = 0dca55f20a72d3279554837f4eba867a1de37fe0f4a7535c2d9bc43867361cc5
 	weak
-[file "src/xAI.Tests/Extensions/Attributes.cs"]
-	url = https://github.com/devlooped/catbag/blob/main/Xunit/Attributes.cs
-	sha = 40914971d4d6b42d6f8a90923b131136f7e609a5
-	etag = c77e7b435ce1df06fb60a3b0e15a0833d8e45d4d19f366c6184140ebb4814b1a
+[file "src/xAI.Protocol/google/rpc/status.proto"]
+	url = https://github.com/googleapis/api-common-protos/blob/main/google/rpc/status.proto
+	sha = cd3a6559b3ec6e81d47a311b1ba8a22c6096ff84
+	etag = a8339d219bc4269194ad4b2fed7660637ad1d9aad5c6be7940c7dee171b45627
 	weak
-[file "osmfeula.txt"]
-	url = https://github.com/devlooped/.github/blob/main/osmfeula.txt
-	sha = 666a2a7c315f72199c418f11482a950fc69a8901
-	etag = 91ea15c07bfd784036c6ca931f5b2df7e9767b8367146d96c79caef09d63899f
-	weak
-[file "src/xAI/Extensions/Throw.cs"]
-	url = https://github.com/devlooped/catbag/blob/main/System/Throw.cs
-	sha = 3012d56be7554c483e5c5d277144c063969cada9
-	etag = 43c81c6c6dcdf5baee40a9e3edc5e871e473e6c954c901b82bb87a3a48888ea0
-	weak
-[file "src/Grok/Extensions/AIContentExtensions.cs"]
-	url = https://github.com/dotnet/extensions/blob/main/src/Libraries/Microsoft.Extensions.AI.Abstractions/Contents/AIContentExtensions.cs
-	sha = c221abef4b4f1bf3fcf0bda27490e8b26bb479f4
-	etag = 510868eaae58941d71cdcb5416f44ebf4436a22d342ca5838172127b04252fe0
+[file "src/xAI.Protocol/google/protobuf/any.proto"]
+	url = https://github.com/protocolbuffers/protobuf/blob/main/src/google/protobuf/any.proto
+	sha = 97921a5fc1d2685d30fb6e74b283a0a6d81660dc
+	etag = dcadaf10862661d714d4738a8255af4e80344343b45f1fa53260ff4778e3e88b
 	weak
