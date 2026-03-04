@@ -44,7 +44,7 @@ var chat = new GrokClient(Environment.GetEnvironmentVariable("XAI_API_KEY")!)
     .AsIChatClient("grok-4.1-fast");
 
 var images = new GrokClient(Environment.GetEnvironmentVariable("XAI_API_KEY")!)
-    .AsIImageGenerator("grok-imagine-image-beta");
+    .AsIImageGenerator("grok-imagine-image");
 ```
 
 ## Web Search
@@ -263,7 +263,7 @@ image generator client:
 
 ```csharp
 var imageGenerator = new GrokClient(Environment.GetEnvironmentVariable("XAI_API_KEY")!)
-    .AsIImageGenerator("grok-imagine-image-beta");
+    .AsIImageGenerator("grok-imagine-image");
 
 var request = new ImageGenerationRequest("A cat sitting on a tree branch");
 var options = new ImageGenerationOptions
@@ -285,7 +285,7 @@ unique to grok-imagine models:
 
 ```csharp
 var imageGenerator = new GrokClient(Environment.GetEnvironmentVariable("XAI_API_KEY")!)
-    .AsIImageGenerator("grok-imagine-image-beta");
+    .AsIImageGenerator("grok-imagine-image");
 
 var request = new ImageGenerationRequest("A futuristic cityscape at sunset");
 var options = new GrokImageGenerationOptions
@@ -310,7 +310,7 @@ generation request:
 
 ```csharp
 var imageGenerator = new GrokClient(Environment.GetEnvironmentVariable("XAI_API_KEY")!)
-    .AsIImageGenerator("grok-imagine-image-beta");
+    .AsIImageGenerator("grok-imagine-image");
 
 // First, generate the original image
 var request = new ImageGenerationRequest("A cat sitting on a tree branch");
@@ -339,7 +339,7 @@ editing inputs — useful for style transfer, composition, or blending scenes:
 
 ```csharp
 var imageGenerator = new GrokClient(Environment.GetEnvironmentVariable("XAI_API_KEY")!)
-    .AsIImageGenerator("grok-imagine-image-beta");
+    .AsIImageGenerator("grok-imagine-image");
 
 var options = new ImageGenerationOptions { ResponseFormat = ImageGenerationResponseFormat.Uri };
 
