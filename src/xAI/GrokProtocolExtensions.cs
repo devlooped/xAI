@@ -80,7 +80,7 @@ public static partial class GrokProtocolExtensions
                         grokSearch.City is not null ||
                         grokSearch.Timezone is not null)
                     {
-                        websearch.UserLocation = new WebSearchUserLocation();
+                        websearch.UserLocation = new();
                         if (grokSearch.Country is not null)
                             websearch.UserLocation.Country = grokSearch.Country;
                         if (grokSearch.Region is not null)
@@ -104,11 +104,11 @@ public static partial class GrokProtocolExtensions
                 }
                 else
                 {
-                    return new Tool { WebSearch = new WebSearch() };
+                    return new Tool { WebSearch = new() };
                 }
 
             case HostedCodeInterpreterTool:
-                return new Tool { CodeExecution = new CodeExecution { } };
+                return new Tool { CodeExecution = new() };
 
             case HostedFileSearchTool fileSearch:
                 var collectionTool = new CollectionsSearch();
@@ -194,6 +194,15 @@ public static partial class GrokProtocolExtensions
                     RawRepresentation = completion
                 });
             }
+            //else if (completion.Role == MessageRole.RoleTool && message.Contents.Count == 0 && content?.Length > 0)
+            //{
+            //    // For tool messages with no content, we can still create a message to hold annotations and completion
+            //    message.Contents.Add(new TextContent(content)
+            //    {
+            //        Annotations = annotations,
+            //        RawRepresentation = completion
+            //    });
+            //}
         }
 
         if (message is not null)
@@ -279,6 +288,18 @@ public static partial class GrokProtocolExtensions
                             }
                             result.Outputs = outputs;
                             yield return result;
+                        }
+                        else
+                        {
+                            // If we can't parse the references, still return as single raw content 
+                            // for further inspection by consumers.
+                            yield return new CollectionSearchToolResultContent
+                            {
+                                Annotations = annotations,
+                                RawRepresentation = toolCall,
+                                CallId = toolCall.Id,
+                                Outputs = [new TextContent(content)]
+                            };
                         }
                     }
                     else

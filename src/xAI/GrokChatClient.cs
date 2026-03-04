@@ -229,7 +229,6 @@ class GrokChatClient : IChatClient
             request.Messages.Add(gmsg);
         }
 
-        IList<IncludeOption> includes = [];
         if (options is GrokChatOptions grokOptions)
         {
             request.Include.AddRange(grokOptions.Include);

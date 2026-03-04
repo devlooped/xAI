@@ -1,9 +1,13 @@
 ﻿using System.Text.Json;
 using Devlooped.Extensions.AI;
+using DotNetEnv;
+using Grpc.Core;
+using Grpc.Net.Client.Configuration;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using xAI.Protocol;
 using Xunit.Abstractions;
+using Xunit.Sdk;
 using ChatConversation = Devlooped.Extensions.AI.Chat;
 
 namespace xAI.Tests;
@@ -151,65 +155,14 @@ public class SanityChecks(ITestOutputHelper output)
         Assert.NotEmpty(finalOutput.Message.Content);
     }
 
-    /// <summary>
-    /// Comprehensive integration test (non-streaming) that exercises all major features:
-    /// - Client-side tool invocation (AIFunctionFactory)
-    /// - Hosted web search tool
-    /// - Hosted code interpreter tool
-    /// - Hosted MCP server tool (GitHub)
-    /// - Citations and annotations
-    /// </summary>
-    [SecretsFact("CI_XAI_API_KEY", "GITHUB_TOKEN")]
-    public async Task IntegrationTest()
-    {
-        var (grok, options, getDateCalls) = SetupIntegrationTest();
-
-        var response = await grok.GetResponseAsync(CreateIntegrationChat(), options);
-
-        AssertIntegrationTest(response, getDateCalls);
-    }
-
-    [SecretsFact("CI_XAI_API_KEY", "GITHUB_TOKEN")]
-    public async Task IntegrationTestStreaming()
-    {
-        var (grok, options, getDateCalls) = SetupIntegrationTest();
-
-        var updates = await grok.GetStreamingResponseAsync(CreateIntegrationChat(), options).ToListAsync();
-        var response = updates.ToChatResponse();
-
-        AssertIntegrationTest(response, getDateCalls);
-    }
-
-    static ChatConversation CreateIntegrationChat() => new()
-    {
-        { "system", "You are a helpful assistant that uses all available tools to answer questions accurately." },
-        { "user",
-            $$"""
-            Please answer the following questions using the appropriate tools:
-            1. What is today's date? (use get_date tool)
-            2. What is the current price of Tesla (TSLA) stock? (use Yahoo news web search, always include citations)
-            3. What is the top news from Tesla on X?
-            4. Calculate the earnings that would be produced by compound interest to $5k savings at 4% annually for 5 years (use code interpreter). 
-               Return just the earnings, not the grand total of savings plus earnings).
-            5. What is the latest release version of the {{ThisAssembly.Git.Url}} repository? (use GitHub MCP tool)
-            
-            Respond with a JSON object in this exact format:
-            {
-              "today": "[date from get_date in YYYY-MM-DD format]",
-              "tesla_price": [numeric price from web search],
-              "tesla_news": "[top news from X]",
-              "compound_interest": [numeric result from code interpreter],
-              "latest_release": "[version string from GitHub]"
-            }
-            """
-        }
-    };
-
-    static (IChatClient grok, GrokChatOptions options, Func<int> getDateCalls) SetupIntegrationTest()
+    [SecretsTheory("CI_XAI_API_KEY")]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ClientSideFunction(bool streaming)
     {
         var getDateCalls = 0;
-        var grok = new GrokClient(Environment.GetEnvironmentVariable("CI_XAI_API_KEY")!)
-            .AsIChatClient("grok-4-1-fast-reasoning")
+        var grok = new GrokClient(Env.GetString("CI_XAI_API_KEY")!)
+            .AsIChatClient("grok-4-1-fast")
             .AsBuilder()
             .UseFunctionInvocation()
             .Build();
@@ -217,14 +170,6 @@ public class SanityChecks(ITestOutputHelper output)
         var options = new GrokChatOptions
         {
             ResponseFormat = ChatResponseFormat.Json,
-            Include =
-            [
-                IncludeOption.InlineCitations,
-                IncludeOption.WebSearchCallOutput,
-                IncludeOption.CodeExecutionCallOutput,
-                IncludeOption.McpCallOutput,
-                IncludeOption.XSearchCallOutput,
-            ],
             Tools =
             [
                 AIFunctionFactory.Create(() =>
@@ -232,33 +177,52 @@ public class SanityChecks(ITestOutputHelper output)
                     getDateCalls++;
                     return DateTime.Now.ToString("yyyy-MM-dd");
                 }, "get_date", "Gets the current date in YYYY-MM-DD format"),
-                new HostedWebSearchTool(),
-                new HostedCodeInterpreterTool(),
-                new HostedMcpServerTool("GitHub", "https://api.githubcopilot.com/mcp/")
-                {
-                    AuthorizationToken = Environment.GetEnvironmentVariable("GITHUB_TOKEN")!,
-                    AllowedTools = ["list_releases", "get_release_by_tag"],
-                },
-                new GrokXSearchTool
-                {
-                    AllowedHandles = ["tesla"]
-                }
             ]
         };
 
-        return (grok, options, () => getDateCalls);
+        var chat = new ChatConversation
+        {
+            { "system", "You are a helpful assistant." },
+            { "user", """
+                What is today's date? Use the get_date tool.
+                Respond with a JSON object: { "today": "[date in YYYY-MM-DD format]" }
+                """ }
+        };
+
+        var response = await GetResponseAsync(grok, chat, options, streaming);
+
+        Assert.True(getDateCalls >= 1, "get_date function was not called");
+
+        var result = ParseJson<DateResult>(response, output);
+        Assert.Equal(DateTime.Today.ToString("yyyy-MM-dd"), result.Today);
+        output.WriteLine($"Today: {result.Today}");
     }
 
-    void AssertIntegrationTest(ChatResponse response, Func<int> getDateCalls)
+    [SecretsTheory("CI_XAI_API_KEY")]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task AgenticWebSearch(bool streaming)
     {
-        // Verify response basics
-        Assert.NotNull(response);
-        Assert.NotNull(response.ModelId);
-        Assert.NotEmpty(response.Messages);
-        Assert.NotNull(response.Usage);
+        var grok = new GrokClient(Env.GetString("CI_XAI_API_KEY")!)
+            .AsIChatClient("grok-4-1-fast");
 
-        // Verify client-side tool was invoked
-        Assert.True(getDateCalls() >= 1);
+        var options = new GrokChatOptions
+        {
+            ResponseFormat = ChatResponseFormat.Json,
+            Include = [IncludeOption.WebSearchCallOutput],
+            Tools = [new HostedWebSearchTool()]
+        };
+
+        var chat = new ChatConversation
+        {
+            { "system", "You are a helpful assistant." },
+            { "user", """
+                What is the current price of Tesla (TSLA) stock? Use web search (Yahoo Finance or similar).
+                Respond with a JSON object: { "tesla_price": [numeric price] }
+                """ }
+        };
+
+        var response = await GetResponseAsync(grok, chat, options, streaming);
 
         // Verify web search tool was used
         var webSearchCalls = response.Messages
@@ -267,91 +231,258 @@ public class SanityChecks(ITestOutputHelper output)
             .ToList();
         Assert.NotEmpty(webSearchCalls);
 
-        // Verify code interpreter tool was used
-        var codeInterpreterCalls = response.Messages
+        // Verify citations were produced
+        var citations = response.Messages
             .SelectMany(x => x.Contents)
-            .OfType<CodeInterpreterToolCallContent>()
+            .SelectMany(x => x.Annotations?.OfType<CitationAnnotation>() ?? [])
+            .Where(x => x.Url is not null)
             .ToList();
-        Assert.NotEmpty(codeInterpreterCalls);
+        Assert.NotEmpty(citations);
 
-        // Verify code interpreter output was included
-        var codeInterpreterResults = response.Messages
-            .SelectMany(x => x.Contents)
-            .OfType<CodeInterpreterToolResultContent>()
+        var result = ParseJson<TeslaPriceResult>(response, output);
+        Assert.True(result.TeslaPrice > 100, $"Tesla price {result.TeslaPrice} should be > 100");
+        output.WriteLine($"Tesla price: {result.TeslaPrice}");
+    }
+
+    [SecretsTheory("CI_XAI_API_KEY")]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task AgenticXSearch(bool streaming)
+    {
+        var grok = new GrokClient(Env.GetString("CI_XAI_API_KEY")!)
+            .AsIChatClient("grok-4-1-fast");
+
+        var options = new GrokChatOptions
+        {
+            ResponseFormat = ChatResponseFormat.Json,
+            Include = [IncludeOption.XSearchCallOutput],
+            Tools = [new GrokXSearchTool { AllowedHandles = ["tesla"] }]
+        };
+
+        var chat = new ChatConversation
+        {
+            { "system", "You are a helpful assistant." },
+            { "user", """
+                What is the top news from Tesla on X? Use the X search tool.
+                Respond with a JSON object: { "tesla_news": "[top news headline or summary]" }
+                """ }
+        };
+
+        var response = await GetResponseAsync(grok, chat, options, streaming);
+
+        // Verify X search tool was used
+        var xSearchCalls = response.Messages
+            .SelectMany(x => x.Contents.Select(c => c.RawRepresentation as xAI.Protocol.ToolCall))
+            .Where(x => x?.Type == xAI.Protocol.ToolCallType.XSearchTool)
             .ToList();
-        Assert.NotEmpty(codeInterpreterResults);
+        Assert.NotEmpty(xSearchCalls);
 
-        // Verify MCP tool was used
+        var result = ParseJson<TeslaNewsResult>(response, output);
+        Assert.NotNull(result.TeslaNews);
+        Assert.NotEmpty(result.TeslaNews);
+        output.WriteLine($"Tesla X news: {result.TeslaNews}");
+    }
+
+    [SecretsTheory("CI_XAI_API_KEY", "GITHUB_TOKEN")]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task AgenticMcpServer(bool streaming)
+    {
+        var grok = new GrokClient(Env.GetString("CI_XAI_API_KEY")!)
+            .AsIChatClient("grok-4-1-fast");
+
+        var options = new GrokChatOptions
+        {
+            ResponseFormat = ChatResponseFormat.Json,
+            Include = [IncludeOption.McpCallOutput],
+            Tools =
+            [
+                new HostedMcpServerTool("GitHub", "https://api.githubcopilot.com/mcp/")
+                {
+                    AuthorizationToken = Env.GetString("GITHUB_TOKEN")!,
+                    AllowedTools = ["list_releases", "get_release_by_tag"],
+                }
+            ]
+        };
+
+        var chat = new ChatConversation
+        {
+            { "system", "You are a helpful assistant." },
+            { "user", $$"""
+                What is the latest release version of the {{ThisAssembly.Git.Url}} repository? Use the GitHub MCP tool.
+                Respond with a JSON object: { "latest_release": "[version string]" }
+                """ }
+        };
+
+        var response = await GetResponseAsync(grok, chat, options, streaming);
+
         var mcpCalls = response.Messages
             .SelectMany(x => x.Contents)
             .OfType<McpServerToolCallContent>()
             .ToList();
         Assert.NotEmpty(mcpCalls);
 
-        // Verify MCP output was included
         var mcpResults = response.Messages
             .SelectMany(x => x.Contents)
             .OfType<McpServerToolResultContent>()
             .ToList();
         Assert.NotEmpty(mcpResults);
 
-        // Verify citations from web search
-        Assert.NotEmpty(response.Messages
-            .SelectMany(x => x.Contents)
-            .SelectMany(x => x.Annotations?.OfType<CitationAnnotation>() ?? [])
-            .Where(x => x.Url is not null)
-            .Select(x => x.Url!));
-
-        // Parse and validate the JSON response
-        var responseText = response.Messages.Last().Text;
-        Assert.NotNull(responseText);
-
-        output.WriteLine("Response text:");
-        output.WriteLine(responseText);
-
-        // Extract JSON from response (may be wrapped in markdown code blocks)
-        var jsonStart = responseText.IndexOf('{');
-        var jsonEnd = responseText.LastIndexOf('}');
-        if (jsonStart >= 0 && jsonEnd > jsonStart)
-        {
-            var json = responseText.Substring(jsonStart, jsonEnd - jsonStart + 1);
-            var result = JsonSerializer.Deserialize<IntegrationTestResponse>(json, new JsonSerializerOptions(JsonSerializerDefaults.Web)
-            {
-                PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
-            });
-
-            Assert.NotNull(result);
-
-            // Verify date is today
-            Assert.Equal(DateTime.Today.ToString("yyyy-MM-dd"), result.Today);
-
-            // Verify Tesla price is reasonable (greater than $100)
-            Assert.True(result.TeslaPrice > 100, $"Tesla price {result.TeslaPrice} should be > 100");
-
-            // Verify compound interest calculation is approximately correct
-            // Formula: P(1 + r)^t - P = 5000 * (1.04)^5 - 5000 ≈ $1,083.26
-            Assert.True(result.CompoundInterest > 1000 && result.CompoundInterest < 1200,
-                $"Compound interest {result.CompoundInterest} should be between 1000 and 1200");
-
-            // Verify latest release contains version pattern
-            Assert.NotNull(result.LatestRelease);
-            Assert.Contains(".", result.LatestRelease);
-
-            output.WriteLine($"Parsed response: Today={result.Today}, TeslaPrice={result.TeslaPrice}, CompoundInterest={result.CompoundInterest}, LatestRelease={result.LatestRelease}");
-        }
-        else
-        {
-            Assert.Fail("Response did not contain expected JSON output");
-        }
-
-        output.WriteLine($"Code interpreter calls: {codeInterpreterCalls.Count}");
+        var result = ParseJson<LatestReleaseResult>(response, output);
+        Assert.NotNull(result.LatestRelease);
+        Assert.Contains(".", result.LatestRelease);
+        output.WriteLine($"Latest release: {result.LatestRelease}");
         output.WriteLine($"MCP calls: {mcpCalls.Count}");
     }
 
-    record IntegrationTestResponse(
-        string Today,
-        decimal TeslaPrice,
-        string TeslaNews,
-        decimal CompoundInterest,
-        string LatestRelease);
+    [SecretsTheory("CI_XAI_API_KEY")]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task AgenticFileSearch(bool streaming)
+    {
+        var grok = new GrokClient(Env.GetString("CI_XAI_API_KEY")!)
+            .AsIChatClient("grok-4-1-fast");
+
+        var options = new GrokChatOptions
+        {
+            ResponseFormat = ChatResponseFormat.Json,
+            Include = [IncludeOption.CollectionsSearchCallOutput],
+            ToolMode = ChatToolMode.RequireAny,
+            Tools =
+            [
+                new HostedFileSearchTool
+                {
+                    Inputs = [new HostedVectorStoreContent("collection_91559d9b-a55d-42fe-b2ad-ecf8904d9049")]
+                }
+            ]
+        };
+
+        var chat = new ChatConversation
+        {
+            { "system", "You are a helpful assistant." },
+            { "user", """
+                What is the law number of Código Procesal Civil y Comercial de la Nación?
+                Use the collection search tool. 
+                Respond with a JSON object: { "law_number": [numeric law number without group separator] }
+                """ }
+        };
+
+        var response = await GetResponseAsync(grok, chat, options, streaming);
+
+        Assert.Contains(
+            response.Messages.SelectMany(x => x.Contents).OfType<CollectionSearchToolCallContent>()
+                .Select(x => x.RawRepresentation as xAI.Protocol.ToolCall),
+            x => x?.Type == xAI.Protocol.ToolCallType.CollectionsSearchTool);
+
+        var files = response.Messages
+            .SelectMany(x => x.Contents).OfType<CollectionSearchToolResultContent>()
+            .SelectMany(x => (x.Outputs ?? []).OfType<HostedFileContent>())
+            .ToList();
+
+        if (files.Count == 0)
+        {
+            var search = response.Messages
+                .SelectMany(x => x.Contents).OfType<CollectionSearchToolResultContent>()
+                .First();
+
+            Assert.Fail("Expected at least one file in the collection search results: " +
+                new ChatMessage(ChatRole.Tool, search.Outputs).Text);
+        }
+
+        output.WriteLine(string.Join(", ", files.Select(x => x.Name)));
+        Assert.Contains(files, x => x.Name?.Contains("LNS0004592") == true);
+
+        var result = ParseJson<LawNumberResult>(response, output);
+        Assert.Equal(17454, result.LawNumber);
+        output.WriteLine($"Law number: {result.LawNumber}");
+    }
+
+    /// <summary>
+    /// Code execution is flaky and can produce:
+    /// Grpc.Core.RpcException : Status(StatusCode="Unavailable", Detail="Bad gRPC response. HTTP status code: 504")
+    /// </summary>
+    [SecretsTheory("CI_XAI_API_KEY")]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task AgenticCodeInterpreter(bool streaming)
+    {
+        var client = new GrokClient(Env.GetString("CI_XAI_API_KEY")!);
+
+        var grok = client.AsIChatClient("grok-4-1-fast");
+
+        var options = new GrokChatOptions
+        {
+            Include = [IncludeOption.CodeExecutionCallOutput],
+            Tools = [new HostedCodeInterpreterTool()]
+        };
+
+        var chat = new ChatConversation
+        {
+            { "system", "You are a helpful assistant." },
+            { "user", """
+                Calculate the earnings produced by compound interest on $5,000 at 4% annually for 5 years.
+                Use the code interpreter. Return just the earnings number (not the total principal + earnings), 
+                no additional text or formatting, and no explanation. The output should be a single numeric value 
+                parseable by a decimal parser.
+                """ }
+        };
+
+        var response = await GetResponseAsync(grok, chat, options, streaming);
+        output.WriteLine($"Compound interest: {response.Text}");
+
+        var codeInterpreterCalls = response.Messages
+            .SelectMany(x => x.Contents)
+            .OfType<CodeInterpreterToolCallContent>()
+            .ToList();
+        Assert.NotEmpty(codeInterpreterCalls);
+
+        var codeInterpreterResults = response.Messages
+            .SelectMany(x => x.Contents)
+            .OfType<CodeInterpreterToolResultContent>()
+            .ToList();
+        Assert.NotEmpty(codeInterpreterResults);
+
+        // Formula: P(1 + r)^t - P = 5000 * (1.04)^5 - 5000 ≈ $1,083.26
+        Assert.NotEmpty(response.Text);
+        Assert.True(decimal.TryParse(response.Text, out var result), $"Could not parse response {response.Text}");
+
+        Assert.True(result > 1000 && result < 1200,
+            $"Compound interest {result} should be between 1000 and 1200");
+        output.WriteLine($"Code interpreter calls: {codeInterpreterCalls.Count}");
+    }
+
+    static async Task<ChatResponse> GetResponseAsync(IChatClient client, ChatConversation chat, GrokChatOptions options, bool streaming)
+    {
+        if (!streaming)
+            return await client.GetResponseAsync(chat, options);
+
+        var updates = await client.GetStreamingResponseAsync(chat, options).ToListAsync();
+        return updates.ToChatResponse();
+    }
+
+    static T ParseJson<T>(ChatResponse response, ITestOutputHelper output)
+    {
+        var responseText = response.Messages.Last().Text;
+        Assert.NotNull(responseText);
+        output.WriteLine("Response text:");
+        output.WriteLine(responseText);
+
+        var jsonStart = responseText.IndexOf('{');
+        var jsonEnd = responseText.LastIndexOf('}');
+        Assert.True(jsonStart >= 0 && jsonEnd > jsonStart, "Response did not contain a JSON object");
+
+        var json = responseText[jsonStart..(jsonEnd + 1)];
+        var result = JsonSerializer.Deserialize<T>(json, new JsonSerializerOptions(JsonSerializerDefaults.Web)
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
+        });
+        Assert.NotNull(result);
+        return result;
+    }
+
+    record DateResult(string Today);
+    record TeslaPriceResult(decimal TeslaPrice);
+    record TeslaNewsResult(string TeslaNews);
+    record LatestReleaseResult(string LatestRelease);
+    record LawNumberResult(int LawNumber);
 }

@@ -29,9 +29,6 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.3" />
     
     <PackageReference Include="DotNetEnv" Version="3.1.1" />
-
-    <PackageReference Include="Devlooped.Extensions.AI.Grok" Version="1.0.0" IncludeAssets="none" />
-    <PackageReference Include="GrokClient" Version="1.1.0" IncludeAssets="none" />
   </ItemGroup>
 
   <ItemGroup>
