@@ -25,7 +25,7 @@ public class ChatClientTests(ITestOutputHelper output)
             { "user", "What day is today?" },
         };
 
-        var chat = new GrokClient(Configuration["XAI_API_KEY"]!).AsIChatClient("grok-4")
+        var chat = new GrokClient(Configuration["XAI_API_KEY"]!).AsIChatClient("grok-4-1-fast")
             .AsBuilder()
             .UseLogging(output.AsLoggerFactory())
             .Build();
@@ -60,7 +60,7 @@ public class ChatClientTests(ITestOutputHelper output)
             { "user", "What's Tesla stock worth today?" },
         };
 
-        var grok = new GrokClient(Configuration["XAI_API_KEY"]!).AsIChatClient("grok-4")
+        var grok = new GrokClient(Configuration["XAI_API_KEY"]!).AsIChatClient("grok-4-1-fast")
             .AsBuilder()
             .UseFunctionInvocation()
             .UseLogging(output.AsLoggerFactory())

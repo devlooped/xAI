@@ -2,7 +2,7 @@
 
 namespace xAI;
 
-/// <summary>Represents a hosted tool agentic call.</summary>
+/// <summary>Represents a hosted collection search call result.</summary>
 public class CollectionSearchToolResultContent : AIContent
 {
     /// <summary>Gets or sets the tool call ID.</summary>
