@@ -1,5 +1,20 @@
 # Changelog
 
+## [v2.0.2](https://github.com/devlooped/xAI/tree/v2.0.2) (2026-03-05)
+
+[Full Changelog](https://github.com/devlooped/xAI/compare/v2.0.1...v2.0.2)
+
+:sparkles: Implemented enhancements:
+
+- Improve resiliency with better retry defaults [\#85](https://github.com/devlooped/xAI/pull/85) (@kzu)
+- Add optional user location information to GrokSearchTool [\#82](https://github.com/devlooped/xAI/pull/82) (@kzu)
+- Improve image generation with multi-image editing, options, and usage [\#80](https://github.com/devlooped/xAI/pull/80) (@kzu)
+- Add Imagine and Batch gRPC APIs [\#79](https://github.com/devlooped/xAI/pull/79) (@kzu)
+
+:twisted_rightwards_arrows: Merged:
+
+- Improve sanity check test [\#83](https://github.com/devlooped/xAI/pull/83) (@kzu)
+
 ## [v2.0.1](https://github.com/devlooped/xAI/tree/v2.0.1) (2026-02-20)
 
 [Full Changelog](https://github.com/devlooped/xAI/compare/v2.0.0...v2.0.1)
