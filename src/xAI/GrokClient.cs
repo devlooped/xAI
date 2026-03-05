@@ -1,6 +1,10 @@
 ﻿using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Net.Http.Headers;
 using Grpc.Net.Client;
+using Microsoft.Extensions.Http;
+using Polly;
+using Polly.Extensions.Http;
 using xAI.Protocol;
 
 namespace xAI;
@@ -47,12 +51,59 @@ public sealed class GrokClient(string apiKey, GrokClientOptions options) : IDisp
 
     internal GrpcChannel Channel => channels.GetOrAdd((Endpoint, ApiKey), key =>
     {
+        var inner = Options.ChannelOptions?.HttpHandler;
+        if (inner == null)
+        {
+            // If no custom HttpHandler is provided, we create one with Polly retry
+            // policies to handle transient errors, including gRPC-specific ones.
+            var retryPolicy = HttpPolicyExtensions
+                .HandleTransientHttpError()
+                .Or<Grpc.Core.RpcException>(ex =>
+                    ex.StatusCode is Grpc.Core.StatusCode.Unavailable or
+                                     Grpc.Core.StatusCode.DeadlineExceeded or
+                                     Grpc.Core.StatusCode.Internal &&
+                    ex.Status.Detail?.Contains("504") == true ||
+                    ex.Status.Detail?.Contains("INTERNAL_ERROR") == true)
+                .WaitAndRetryAsync(
+                    retryCount: 3,
+                    sleepDurationProvider: attempt => TimeSpan.FromSeconds(Math.Pow(2, attempt))
+#if DEBUG
+                    , onRetry: (outcome, delay, retryCount, ctx) =>
+                    {
+                        Debug.WriteLine($"[xAI Streaming Retry #{retryCount}] {outcome.Exception?.Message} — waiting {delay.TotalSeconds}s");
+                    }
+#endif
+                    );
+
+            inner = new PolicyHttpMessageHandler(retryPolicy)
+            {
+                InnerHandler = new SocketsHttpHandler
+                {
+                    PooledConnectionLifetime = TimeSpan.FromMinutes(20),
+                    KeepAlivePingDelay = TimeSpan.FromSeconds(30),
+                    KeepAlivePingTimeout = TimeSpan.FromSeconds(10),
+                    KeepAlivePingPolicy = HttpKeepAlivePingPolicy.Always,   // crucial for long streams
+                    EnableMultipleHttp2Connections = true,
+                    ConnectTimeout = TimeSpan.FromSeconds(60),
+                    MaxConnectionsPerServer = 10
+                }
+            };
+        }
+
         var handler = new AuthenticationHeaderHandler(ApiKey)
         {
-            InnerHandler = Options.ChannelOptions?.HttpHandler ?? new HttpClientHandler()
+            InnerHandler = inner
         };
 
-        var options = Options.ChannelOptions ?? new GrpcChannelOptions();
+        // Provide some sensible defaults for gRPC channel options, while allowing users to
+        // override them via GrokClientOptions.ChannelOptions if needed.
+        var options = Options.ChannelOptions ?? new GrpcChannelOptions
+        {
+            DisposeHttpClient = true,
+            MaxReceiveMessageSize = 128 * 1024 * 1024,   // large enough for tool output
+            MaxSendMessageSize = 16 * 1024 * 1024,
+        };
+
         options.HttpHandler = handler;
 
         return GrpcChannel.ForAddress(Endpoint, options);
