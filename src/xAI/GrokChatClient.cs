@@ -157,6 +157,11 @@ class GrokChatClient : IChatClient
                 {
                     gmsg.Content.Add(new Content { Text = textContent.Text });
                 }
+                else if (content is TextReasoningContent reasoning)
+                {
+                    gmsg.ReasoningContent = reasoning.Text;
+                    gmsg.EncryptedContent = reasoning.ProtectedData;
+                }
                 else if (content is DataContent dataContent && dataContent.HasTopLevelMediaType("image"))
                 {
                     gmsg.Content.Add(new Content { ImageUrl = new ImageUrlContent { ImageUrl = $"data:{dataContent.MediaType};base64,{Convert.ToBase64String(dataContent.Data.Span)}" } });
@@ -241,6 +246,8 @@ class GrokChatClient : IChatClient
             {
                 (options.Tools ??= []).Insert(0, new GrokSearchTool());
             }
+
+            request.UseEncryptedContent = grokOptions.UseEncryptedContent;
         }
 
         if (options?.Tools is not null)
