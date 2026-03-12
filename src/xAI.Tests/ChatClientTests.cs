@@ -456,15 +456,15 @@ public class ChatClientTests(ITestOutputHelper output)
     {
         var messages = new Chat()
         {
-            { "user", "When was GrokClient v1.0.0 released on the devlooped/GrokClient repo? Respond with just the date, in YYYY-MM-DD format." },
+            { "user", "When was GrokClient v1.1.0 released on the devlooped/GrokClient repo? Respond with just the date, in YYYY-MM-DD format." },
         };
 
-        var grok = new GrokClient(Configuration["XAI_API_KEY"]!).AsIChatClient("grok-4-fast");
+        var grok = new GrokClient(Configuration["XAI_API_KEY"]!).AsIChatClient("grok-4-1-fast-non-reasoning");
 
         var options = new ChatOptions
         {
             Tools = [new HostedMcpServerTool("GitHub", "https://api.githubcopilot.com/mcp/") {
-                AuthorizationToken = Configuration["GITHUB_TOKEN"]!,
+                Headers = new Dictionary<string, string> { ["Authorization"] = Configuration["GITHUB_TOKEN"]! },
                 AllowedTools = ["list_releases"],
             }]
         };
@@ -472,12 +472,12 @@ public class ChatClientTests(ITestOutputHelper output)
         var response = await grok.GetResponseAsync(messages, options);
         var text = response.Text;
 
-        Assert.Equal("2025-11-29", text);
+        Assert.Equal("2026-01-05", text);
         var call = Assert.Single(response.Messages
                 .SelectMany(x => x.Contents)
                 .OfType<McpServerToolCallContent>());
 
-        Assert.Equal("GitHub.list_releases", call.ToolName);
+        Assert.Equal("GitHub.list_releases", call.Name);
     }
 
     [SecretsFact("XAI_API_KEY", "GITHUB_TOKEN")]
@@ -485,16 +485,16 @@ public class ChatClientTests(ITestOutputHelper output)
     {
         var messages = new Chat()
         {
-            { "user", "When was GrokClient v1.0.0 released on the devlooped/GrokClient repo? Respond with just the date, in YYYY-MM-DD format." },
+            { "user", "When was GrokClient v1.1.0 released on the devlooped/GrokClient repo? Respond with just the date, in YYYY-MM-DD format." },
         };
 
-        var grok = new GrokClient(Configuration["XAI_API_KEY"]!).AsIChatClient("grok-4-fast");
+        var grok = new GrokClient(Configuration["XAI_API_KEY"]!).AsIChatClient("grok-4-1-fast-non-reasoning");
 
         var options = new GrokChatOptions
         {
             Include = { IncludeOption.McpCallOutput },
             Tools = [new HostedMcpServerTool("GitHub", "https://api.githubcopilot.com/mcp/") {
-                AuthorizationToken = Configuration["GITHUB_TOKEN"]!,
+                Headers = new Dictionary<string, string> { ["Authorization"] = Configuration["GITHUB_TOKEN"]! },
                 AllowedTools = ["list_releases"],
             }]
         };
@@ -506,16 +506,16 @@ public class ChatClientTests(ITestOutputHelper output)
                 .SelectMany(x => x.Contents)
                 .OfType<McpServerToolResultContent>());
 
-        Assert.NotNull(output.Output);
-        Assert.Single(output.Output);
-        var json = Assert.Single(output.Output!.OfType<TextContent>()).Text;
+        Assert.NotNull(output.Outputs);
+        Assert.Single(output.Outputs);
+        var json = Assert.Single(output.Outputs!.OfType<TextContent>()).Text;
         var tags = JsonSerializer.Deserialize<List<Release>>(json, new JsonSerializerOptions(JsonSerializerDefaults.Web)
         {
             PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
         });
 
         Assert.NotNull(tags);
-        Assert.Contains(tags, x => x.TagName == "v1.0.0");
+        Assert.Contains(tags, x => x.TagName == "v1.1.0");
     }
 
     record Release(string TagName, DateTimeOffset CreatedAt);
@@ -527,12 +527,12 @@ public class ChatClientTests(ITestOutputHelper output)
         {
             { "user",
                 """
-                What's the oldest stable version released on the devlooped/GrokClient repo on GitHub?, 
+                What's the latest stable version released on the devlooped/GrokClient repo on GitHub?, 
                 what is the current price of Tesla stock, 
                 and what is the current date? Respond with the following JSON: 
                 {
-                  "today": "[get_date result]",
-                  "release": "[first stable release of devlooped/GrokClient, using GitHub MCP tool]",
+                  "today": "[get_date result in yyyy-MM-dd format]",
+                  "release": "[latest stable release of devlooped/GrokClient, using GitHub MCP tool]",
                   "price": [$TSLA price using web search tool]
                 }
                 """
@@ -540,7 +540,7 @@ public class ChatClientTests(ITestOutputHelper output)
         };
 
         var grok = new GrokClient(Configuration["XAI_API_KEY"]!)
-            .AsIChatClient("grok-4-fast")
+            .AsIChatClient("grok-4-1-fast-non-reasoning")
             .AsBuilder()
             .UseFunctionInvocation()
             .UseLogging(output.AsLoggerFactory())
@@ -554,12 +554,12 @@ public class ChatClientTests(ITestOutputHelper output)
             [
                 new HostedWebSearchTool(),
                 new HostedMcpServerTool("GitHub", "https://api.githubcopilot.com/mcp/") {
-                    AuthorizationToken = Configuration["GITHUB_TOKEN"]!,
+                    Headers = new Dictionary<string, string> { ["Authorization"] = Configuration["GITHUB_TOKEN"]! },
                     AllowedTools = ["list_releases", "get_release_by_tag"],
                 },
                 AIFunctionFactory.Create(() => {
                     getDateCalls++;
-                    return DateTimeOffset.Now.ToString("O");
+                    return DateTimeOffset.UtcNow.ToString("O");
                 }, "get_date", "Gets the current date")
             ]
         };
@@ -581,8 +581,8 @@ public class ChatClientTests(ITestOutputHelper output)
 
         Assert.Equal(1, getDateCalls);
 
-        Assert.Equal(DateOnly.FromDateTime(DateTime.Today), typed.Today);
-        Assert.EndsWith("1.0.0", typed.Release);
+        Assert.Equal(DateOnly.FromDateTime(DateTime.UtcNow), typed.Today);
+        Assert.EndsWith("1.1.0", typed.Release);
         Assert.True(typed.Price > 100);
     }
 

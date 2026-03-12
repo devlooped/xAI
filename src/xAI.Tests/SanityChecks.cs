@@ -299,7 +299,7 @@ public class SanityChecks(ITestOutputHelper output)
             [
                 new HostedMcpServerTool("GitHub", "https://api.githubcopilot.com/mcp/")
                 {
-                    AuthorizationToken = Env.GetString("GITHUB_TOKEN")!,
+                    Headers = new Dictionary < string, string > {["Authorization"] = Env.GetString("GITHUB_TOKEN") ! },
                     AllowedTools = ["list_releases", "get_release_by_tag"],
                 }
             ]

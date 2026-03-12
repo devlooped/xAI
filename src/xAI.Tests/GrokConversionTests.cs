@@ -265,7 +265,7 @@ public class GrokConversionTests
         })
         {
             AllowedTools = ["list"],
-            AuthorizationToken = accessToken,
+            Headers = new Dictionary<string, string> { ["Authorization"] = accessToken },
         };
 
         var tool = mcpTool.AsProtocolTool();
