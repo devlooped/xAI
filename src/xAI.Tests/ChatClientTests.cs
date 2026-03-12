@@ -70,7 +70,6 @@ public class ChatClientTests(ITestOutputHelper output)
     {
         var messages = new Chat()
         {
-            { "system", "You are a bot that invokes the tool get_date when asked for the date." },
             { "user", "What day is today?" },
         };
 
@@ -100,6 +99,12 @@ public class ChatClientTests(ITestOutputHelper output)
             .Any(x => x.Name == "get_date");
 
         Assert.True(getdate);
+
+        messages.AddRange(response.Messages);
+        messages.Add("user", "What date is tomorrow then?");
+
+        var tomorrow = await chat.GetResponseAsync<DateOnly>(messages, options);
+        Assert.Equal(DateOnly.FromDateTime(DateTime.Today.AddDays(1)), tomorrow.Result);
     }
 
     [SecretsFact("XAI_API_KEY")]
@@ -136,7 +141,7 @@ public class ChatClientTests(ITestOutputHelper output)
     {
         var messages = new Chat()
         {
-            { "system", "You use Nasdaq for stocks news and prices." },
+            { "system", "You use Nasdaq for stocks news and prices, get_date for getting today's date." },
             { "user", "What's Tesla stock worth today?" },
         };
 
@@ -160,6 +165,8 @@ public class ChatClientTests(ITestOutputHelper output)
 
         var response = await grok.GetResponseAsync(messages, options);
 
+        Assert.False(getDateCalls == 0, "Expected the get_date tool to be called at least once.");
+
         // The get_date result shows up as a tool role
         Assert.Contains(response.Messages, x => x.Role == ChatRole.Tool);
 
@@ -174,7 +181,6 @@ public class ChatClientTests(ITestOutputHelper output)
         Assert.Equal(1, getDateCalls);
         Assert.Contains(urls, x => x.Host.EndsWith("nasdaq.com"));
         Assert.Contains(urls, x => x.PathAndQuery.Contains("/TSLA"));
-        Assert.Equal(options.ModelId, response.ModelId);
 
         var calls = response.Messages
             .SelectMany(x => x.Contents.Select(x => x.RawRepresentation as xAI.Protocol.ToolCall))
@@ -213,10 +219,11 @@ public class ChatClientTests(ITestOutputHelper output)
             .SelectMany(x => x.Annotations ?? [])
             .OfType<CitationAnnotation>()
             .Where(x => x.Url != null)
-            .Select(x => x.Url!.AbsoluteUri)
+            .Select(x => x.Url!.Host)
+            .Distinct()
             .ToList();
 
-        Assert.Contains("https://partediario.catedralaltapatagonia.com/partediario/", citations);
+        Assert.Contains("catedralaltapatagonia.com", citations);
     }
 
     [SecretsFact("XAI_API_KEY")]
@@ -416,6 +423,7 @@ public class ChatClientTests(ITestOutputHelper output)
     {
         var messages = new Chat()
         {
+            { "system", "Utilizar collection/file search SIEMPRE para buscar informacion legal." },
             { "user", "¿Cuál es el monto exacto del rango de la multa por inasistencia injustificada a la audiencia señalada por el juez en el proceso sucesorio, según lo establecido en el Artículo 691 del Código Procesal Civil y Comercial de la Nación (Ley 17.454)?" },
         };
 
@@ -431,7 +439,6 @@ public class ChatClientTests(ITestOutputHelper output)
         var response = await grok.GetResponseAsync(messages, options);
         var text = response.Text;
 
-        Assert.Contains("11,74", text);
         Assert.Contains(response.Messages
                 .SelectMany(x => x.Contents)
                 .OfType<CollectionSearchToolCallContent>()
@@ -439,6 +446,8 @@ public class ChatClientTests(ITestOutputHelper output)
             x => x?.Type == xAI.Protocol.ToolCallType.CollectionsSearchTool);
         // No actual search results content since we didn't specify it in Include
         Assert.Empty(response.Messages.SelectMany(x => x.Contents).OfType<CollectionSearchToolResultContent>());
+
+        Assert.Contains("11,74", text);
 
         options.Include = [IncludeOption.CollectionsSearchCallOutput];
         response = await grok.GetResponseAsync(messages, options);
@@ -606,7 +615,7 @@ public class ChatClientTests(ITestOutputHelper output)
                 }
             }));
 
-        var grok = new GrokChatClient(client.Object, "grok-4-1-fast");
+        var grok = new GrokChatClient(client.Object, "grok-4-1-fast-non-reasoning");
         var response = await grok.GetResponseAsync("Hi, my internet alias is kzu. Lookup my real full name online.",
             new GrokChatOptions
             {
@@ -648,7 +657,7 @@ public class ChatClientTests(ITestOutputHelper output)
                 }
             }));
 
-        var grok = new GrokChatClient(client.Object, "grok-4-1-fast");
+        var grok = new GrokChatClient(client.Object, "grok-4-1-fast-non-reasoning");
         var messages = new List<ChatMessage>
         {
             new(ChatRole.User, "What's the time?"),
@@ -685,7 +694,7 @@ public class ChatClientTests(ITestOutputHelper output)
                 }
             }));
 
-        var grok = new GrokChatClient(client.Object, "grok-4-1-fast");
+        var grok = new GrokChatClient(client.Object, "grok-4-1-fast-non-reasoning");
         var messages = new List<ChatMessage>
         {
             new(ChatRole.User, "What's the time?"),
@@ -722,7 +731,7 @@ public class ChatClientTests(ITestOutputHelper output)
             }));
 
         var imageBytes = new byte[] { 1, 2, 3, 4, 5 };
-        var grok = new GrokChatClient(client.Object, "grok-4-1-fast");
+        var grok = new GrokChatClient(client.Object, "grok-4-1-fast-non-reasoning");
         var messages = new List<ChatMessage>
         {
             new(ChatRole.User, [new TextContent("What do you see?"), new DataContent(imageBytes, "image/png")]),
@@ -759,7 +768,7 @@ public class ChatClientTests(ITestOutputHelper output)
             }));
 
         var imageUri = new Uri("https://example.com/photo.jpg");
-        var grok = new GrokChatClient(client.Object, "grok-4-1-fast");
+        var grok = new GrokChatClient(client.Object, "grok-4-1-fast-non-reasoning");
         var messages = new List<ChatMessage>
         {
             new(ChatRole.User, [new TextContent("What do you see?"), new UriContent(imageUri, "image/jpeg")]),

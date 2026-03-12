@@ -277,12 +277,14 @@ class GrokChatClient : IChatClient
                 if (tool is not null) request.Tools.Add(tool);
         }
 
-        if (options?.ResponseFormat is ChatResponseFormatJson)
+        if (options?.ResponseFormat is ChatResponseFormatJson jsonFormat)
         {
-            request.ResponseFormat = new ResponseFormat
+            request.ResponseFormat = new ResponseFormat { FormatType = FormatType.JsonObject };
+            if (jsonFormat.Schema != null)
             {
-                FormatType = FormatType.JsonObject
-            };
+                request.ResponseFormat.FormatType = FormatType.JsonSchema;
+                request.ResponseFormat.Schema = jsonFormat.Schema?.ToString();
+            }
         }
 
         return request;
