@@ -126,13 +126,24 @@ public static partial class GrokProtocolExtensions
             case HostedMcpServerTool mcpTool:
                 var mcp = new MCP
                 {
-                    Authorization = mcpTool.AuthorizationToken,
                     ServerLabel = mcpTool.ServerName,
                     ServerUrl = mcpTool.ServerAddress,
                     AllowedToolNames = { mcpTool.AllowedTools ?? Array.Empty<string>() },
                 };
 
+                if (mcpTool.Headers?.TryGetValue("Authorization", out var authHeader) == true && !string.IsNullOrEmpty(authHeader))
+                {
+                    mcp.Authorization = authHeader;
+                    foreach (var item in mcpTool.Headers.Where(x => x.Key != "Authorization"))
+                        mcp.ExtraHeaders.Add(item.Key, item.Value);
+                }
+                else if (mcpTool.Headers != null)
+                {
+                    mcp.ExtraHeaders.Add(mcpTool.Headers);
+                }
+
                 // We can set an entire dictionary with a specific key
+                // We keep this for backs compat, but makes little sense now with McpTool.Headers property available.
                 if (mcpTool.GetProperty<IDictionary<string, string>>(nameof(MCP.ExtraHeaders)) is { } headers)
                     mcp.ExtraHeaders.Add(headers);
 
@@ -239,23 +250,21 @@ public static partial class GrokProtocolExtensions
                         {
                             Annotations = annotations,
                             RawRepresentation = toolCall,
-                            Output = [new TextContent(content)]
+                            Outputs = [new TextContent(content)]
                         };
                     break;
 
                 case ToolCallType.CodeExecutionTool:
-                    yield return new CodeInterpreterToolCallContent()
+                    yield return new CodeInterpreterToolCallContent(toolCall.Id)
                     {
                         Annotations = annotations,
                         RawRepresentation = toolCall,
-                        CallId = toolCall.Id,
                     };
                     if (content is not null)
-                        yield return new CodeInterpreterToolResultContent()
+                        yield return new CodeInterpreterToolResultContent(toolCall.Id)
                         {
                             Annotations = annotations,
                             RawRepresentation = toolCall,
-                            CallId = toolCall.Id,
                             Outputs = [new TextContent(content)]
                         };
                     break;

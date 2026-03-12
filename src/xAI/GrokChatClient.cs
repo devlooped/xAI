@@ -194,14 +194,17 @@ class GrokChatClient : IChatClient
                         Role = MessageRole.RoleTool,
                         Content = { new Content { Text = JsonSerializer.Serialize(resultContent.Result) ?? "null" } }
                     };
+
                     if (resultContent.CallId is { Length: > 0 } callId)
                         msg.ToolCallId = callId;
+
                     request.Messages.Add(msg);
                 }
                 else if (content is McpServerToolResultContent mcpResult &&
                     mcpResult.RawRepresentation is ToolCall mcpToolCall &&
-                    mcpResult.Output is { Count: 1 } &&
-                    mcpResult.Output[0] is TextContent mcpText)
+                    // TODO: what if there are multiple outputs?
+                    mcpResult.Outputs is { Count: 1 } &&
+                    mcpResult.Outputs[0] is TextContent mcpText)
                 {
                     request.Messages.Add(new Message
                     {
@@ -212,6 +215,7 @@ class GrokChatClient : IChatClient
                 }
                 else if (content is CodeInterpreterToolResultContent codeResult &&
                     codeResult.RawRepresentation is ToolCall codeToolCall &&
+                    // TODO: what if there are multiple outputs?
                     codeResult.Outputs is { Count: 1 } &&
                     codeResult.Outputs[0] is TextContent codeText)
                 {
