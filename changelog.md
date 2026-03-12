@@ -1,5 +1,16 @@
 # Changelog
 
+## [v2.0.3](https://github.com/devlooped/xAI/tree/v2.0.3) (2026-03-12)
+
+[Full Changelog](https://github.com/devlooped/xAI/compare/v2.0.2...v2.0.3)
+
+:sparkles: Implemented enhancements:
+
+- Add support for JSON schema in gRPC requests [\#94](https://github.com/devlooped/xAI/pull/94) (@kzu)
+- Use RawRepresentation for more faithful native multi-turn [\#93](https://github.com/devlooped/xAI/pull/93) (@kzu)
+- Bump to latest AI abstractions, adapt code to it [\#92](https://github.com/devlooped/xAI/pull/92) (@kzu)
+- Add support for reasoning content and encrypted content [\#91](https://github.com/devlooped/xAI/pull/91) (@kzu)
+
 ## [v2.0.2](https://github.com/devlooped/xAI/tree/v2.0.2) (2026-03-05)
 
 [Full Changelog](https://github.com/devlooped/xAI/compare/v2.0.1...v2.0.2)
