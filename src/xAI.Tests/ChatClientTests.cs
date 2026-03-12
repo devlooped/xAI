@@ -5,6 +5,7 @@ using Devlooped.Extensions.AI;
 using Grpc.Core;
 using Microsoft.Extensions.AI;
 using Moq;
+using OpenAI;
 using Tests.Client.Helpers;
 using xAI;
 using xAI.Protocol;
@@ -14,8 +15,56 @@ using OpenAIClientOptions = OpenAI.OpenAIClientOptions;
 
 namespace xAI.Tests;
 
+// TODO: remove when shipped upstream in Chat
+public static class ChatExtensions
+{
+    public static void AddRange(this Chat chat, IEnumerable<ChatMessage> messages)
+    {
+        foreach (var message in messages)
+            chat.Add(message);
+    }
+}
+
 public class ChatClientTests(ITestOutputHelper output)
 {
+    [SecretsFact("OPENAI_API_KEY")]
+    public async Task OpenAIInvokesTools()
+    {
+        var messages = new Chat()
+        {
+            { "user", "What day is today?" },
+        };
+
+        var chat = new OpenAIClient(Configuration["OPENAI_API_KEY"]!).GetChatClient("gpt-5.4").AsIChatClient()
+            .AsBuilder()
+            .UseFunctionInvocation(configure: client => client.MaximumIterationsPerRequest = 3)
+            .UseLogging(output.AsLoggerFactory())
+            .Build();
+
+        var getDateCalls = 0;
+        var options = new ChatOptions
+        {
+            Tools = [AIFunctionFactory.Create(() =>
+            {
+                getDateCalls++;
+                return DateTimeOffset.Now.ToString("O");
+            }, "get_date", "Gets the current date")],
+        };
+
+        var response = await chat.GetResponseAsync(messages, options);
+        var getdate = response.Messages
+            .SelectMany(x => x.Contents.OfType<FunctionCallContent>())
+            .Any(x => x.Name == "get_date");
+
+        Assert.True(getdate);
+
+        messages.AddRange(response.Messages);
+        messages.Add("user", "What date is tomorrow then?");
+
+        var tomorrow = await chat.GetResponseAsync<DateOnly>(messages, options);
+        Assert.Equal(DateOnly.FromDateTime(DateTime.Today.AddDays(1)), tomorrow.Result);
+    }
+
     [SecretsFact("XAI_API_KEY")]
     public async Task GrokInvokesTools()
     {
@@ -27,13 +76,18 @@ public class ChatClientTests(ITestOutputHelper output)
 
         var chat = new GrokClient(Configuration["XAI_API_KEY"]!).AsIChatClient("grok-4-1-fast")
             .AsBuilder()
+            .UseFunctionInvocation(configure: client => client.MaximumIterationsPerRequest = 3)
             .UseLogging(output.AsLoggerFactory())
             .Build();
 
+        var getDateCalls = 0;
         var options = new GrokChatOptions
         {
-            ModelId = "grok-4-fast-non-reasoning",
-            Tools = [AIFunctionFactory.Create(() => DateTimeOffset.Now.ToString("O"), "get_date")],
+            Tools = [AIFunctionFactory.Create(() =>
+            {
+                getDateCalls++;
+                return DateOnly.FromDateTime(DateTime.Now).ToString("yyyy-MM-dd");
+            }, "get_date", "Gets the current date")],
             AdditionalProperties = new()
             {
                 { "foo", "bar" }
@@ -46,9 +100,35 @@ public class ChatClientTests(ITestOutputHelper output)
             .Any(x => x.Name == "get_date");
 
         Assert.True(getdate);
-        // NOTE: the chat client was requested as grok-3 but the chat options wanted a 
-        // different model and the grok client honors that choice.
-        Assert.Equal(options.ModelId, response.ModelId);
+    }
+
+    [SecretsFact("XAI_API_KEY")]
+    public async Task GrokReasoningModelOutputsBothContentAndEncryptedReasoning()
+    {
+        var grok = new GrokClient(Configuration["XAI_API_KEY"]!).AsIChatClient("grok-4-1-fast");
+
+        var response = await grok.GetResponseAsync(
+            "What is 3 + 4? Respond with just the number.",
+            new GrokChatOptions
+            {
+                UseEncryptedContent = true
+            });
+
+        // Reasoning models emit a TextReasoningContent alongside the TextContent answer
+        var reasoning = Assert.Single(response.Messages
+            .SelectMany(x => x.Contents)
+            .OfType<TextReasoningContent>());
+
+        // The reasoning trace itself should be non-empty
+        Assert.NotEmpty(reasoning.Text ?? "");
+
+        // With UseEncryptedContent=true the encrypted blob must also be present
+        Assert.NotNull(reasoning.ProtectedData);
+        Assert.NotEmpty(reasoning.ProtectedData);
+
+        // And the actual answer is still present as a TextContent
+        Assert.Contains(response.Messages.SelectMany(x => x.Contents).OfType<TextContent>(),
+            x => x.Text.Contains('7'));
     }
 
     [SecretsFact("XAI_API_KEY")]

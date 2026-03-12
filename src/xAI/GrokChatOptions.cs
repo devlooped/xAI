@@ -28,4 +28,7 @@ public class GrokChatOptions : ChatOptions
 
     /// <summary>Additional outputs to include in responses.</summary>
     public IList<IncludeOption> Include { get; set; } = [];
+
+    /// <summary>Whether to use encrypted thinking for thinking trace rehydration.</summary>
+    public bool UseEncryptedContent { get; set; }
 }
