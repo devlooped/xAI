@@ -45,11 +45,11 @@ class GrokChatClient : IChatClient
             ResponseId = response.Id,
             ModelId = response.Model,
             CreatedAt = response.Created?.ToDateTimeOffset(),
-            FinishReason = lastOutput != null ? MapFinishReason(lastOutput.FinishReason) : null,
-            Usage = MapToUsage(response.Usage),
+            FinishReason = lastOutput != null ? lastOutput.FinishReason.Convert() : null,
+            Usage = response.Usage.Convert(),
         };
 
-        var citations = response.Citations?.Distinct().Select(MapCitation).ToList<AIAnnotation>();
+        var citations = response.Citations?.Distinct().Select(x => x.FromCitationUrl()).ToList<AIAnnotation>();
 
         ((List<ChatMessage>)result.Messages).AddRange(response.Outputs.AsChatMessages(citations));
 
@@ -73,12 +73,12 @@ class GrokChatClient : IChatClient
                 // Use positional arguments for ChatResponseUpdate
                 var update = new ChatResponseUpdate
                 {
-                    Role = MapRole(output.Delta.Role),
+                    Role = output.Delta.Role.Convert(),
                     ResponseId = chunk.Id,
                     ModelId = chunk.Model,
                     CreatedAt = chunk.Created?.ToDateTimeOffset(),
                     RawRepresentation = chunk,
-                    FinishReason = output.FinishReason != FinishReason.ReasonInvalid ? MapFinishReason(output.FinishReason) : null,
+                    FinishReason = output.FinishReason != FinishReason.ReasonInvalid ? output.FinishReason.Convert() : null,
                 };
 
                 var citations = chunk.Citations?.Distinct().Select(MapCitation).ToList<AIAnnotation>();
@@ -101,7 +101,7 @@ class GrokChatClient : IChatClient
                     text is not null)
                     update.Contents.Add(new TextContent(text));
 
-                if (MapToUsage(chunk.Usage) is { } usage)
+                if (chunk.Usage.Convert() is { } usage)
                     update.Contents.Add(new UsageContent(usage) { RawRepresentation = chunk.Usage });
 
                 yield return update;
@@ -149,10 +149,27 @@ class GrokChatClient : IChatClient
 
         foreach (var message in messages)
         {
-            var gmsg = new Message { Role = MapRole(message.Role) };
+            if (message.RawRepresentation is Message input)
+            {
+                request.Messages.Add(input);
+                continue;
+            }
+            else if (message.RawRepresentation is CompletionMessage completion)
+            {
+                request.Messages.Add(completion.AsMessage());
+                continue;
+            }
+
+            var gmsg = new Message { Role = message.Role.Convert() };
 
             foreach (var content in message.Contents)
             {
+                if (content.RawRepresentation is CompletionMessage completion)
+                {
+                    request.Messages.Add(completion.AsMessage());
+                    continue;
+                }
+
                 if (content is TextContent textContent && !string.IsNullOrEmpty(textContent.Text))
                 {
                     gmsg.Content.Add(new Content { Text = textContent.Text });
@@ -270,41 +287,6 @@ class GrokChatClient : IChatClient
 
         return request;
     }
-
-    static MessageRole MapRole(ChatRole role) => role switch
-    {
-        _ when role == ChatRole.System => MessageRole.RoleSystem,
-        _ when role == ChatRole.User => MessageRole.RoleUser,
-        _ when role == ChatRole.Assistant => MessageRole.RoleAssistant,
-        _ when role == ChatRole.Tool => MessageRole.RoleTool,
-        _ => MessageRole.RoleUser
-    };
-
-    static ChatRole MapRole(MessageRole role) => role switch
-    {
-        MessageRole.RoleSystem => ChatRole.System,
-        MessageRole.RoleUser => ChatRole.User,
-        MessageRole.RoleAssistant => ChatRole.Assistant,
-        MessageRole.RoleTool => ChatRole.Tool,
-        _ => ChatRole.Assistant
-    };
-
-    static ChatFinishReason? MapFinishReason(FinishReason finishReason) => finishReason switch
-    {
-        FinishReason.ReasonStop => ChatFinishReason.Stop,
-        FinishReason.ReasonMaxLen => ChatFinishReason.Length,
-        FinishReason.ReasonToolCalls => ChatFinishReason.ToolCalls,
-        FinishReason.ReasonMaxContext => ChatFinishReason.Length,
-        FinishReason.ReasonTimeLimit => ChatFinishReason.Length,
-        _ => null
-    };
-
-    static UsageDetails? MapToUsage(SamplingUsage usage) => usage == null ? null : new()
-    {
-        InputTokenCount = usage.PromptTokens,
-        OutputTokenCount = usage.CompletionTokens,
-        TotalTokenCount = usage.TotalTokens
-    };
 
     /// <inheritdoc />
     public object? GetService(Type serviceType, object? serviceKey = null) => serviceType switch

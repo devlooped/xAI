@@ -161,11 +161,13 @@ public static partial class GrokProtocolExtensions
 
     static IEnumerable<ChatMessage> ToChatMessages(IEnumerable<CompletionMessage> messages, List<AIAnnotation>? citations = default)
     {
-        ChatMessage? message = null;
-
         foreach (var completion in messages)
         {
-            message ??= new(ChatRole.Assistant, (string?)null);
+            ChatMessage message = new(ChatRole.Assistant, (string?)null)
+            {
+                RawRepresentation = completion
+            };
+
             var annotations = citations;
             if (completion.Citations.Count > 0)
             {
@@ -214,10 +216,9 @@ public static partial class GrokProtocolExtensions
             //        RawRepresentation = completion
             //    });
             //}
-        }
 
-        if (message is not null)
             yield return message;
+        }
     }
 
     internal static IEnumerable<AIContent> AsContents(this IEnumerable<ToolCall> toolCalls, string? content = default, List<AIAnnotation>? annotations = default)
@@ -355,6 +356,80 @@ public static partial class GrokProtocolExtensions
             citation.CollectionsCitation.FileId, citation.CollectionsCitation.ChunkId, citation.CollectionsCitation.ChunkContent, citation.CollectionsCitation.Score, [.. citation.CollectionsCitation.CollectionIds])),
         _ => [new CitationAnnotation { RawRepresentation = citation }]
     };
+
+    internal static Message AsMessage(this CompletionMessage completion)
+    {
+        var message = new Message
+        {
+            Role = completion.Role,
+            EncryptedContent = completion.EncryptedContent,
+            ReasoningContent = completion.ReasoningContent,
+        };
+
+        if (!string.IsNullOrEmpty(completion.Content))
+            message.Content.Add(new Content { Text = completion.Content });
+
+        message.ToolCalls.AddRange(completion.ToolCalls);
+
+        return message;
+    }
+
+    internal static MessageRole Convert(this ChatRole role) => role switch
+    {
+        _ when role == ChatRole.System => MessageRole.RoleSystem,
+        _ when role == ChatRole.User => MessageRole.RoleUser,
+        _ when role == ChatRole.Assistant => MessageRole.RoleAssistant,
+        _ when role == ChatRole.Tool => MessageRole.RoleTool,
+        _ => MessageRole.RoleUser
+    };
+
+    internal static ChatRole Convert(this MessageRole role) => role switch
+    {
+        MessageRole.RoleSystem => ChatRole.System,
+        MessageRole.RoleUser => ChatRole.User,
+        MessageRole.RoleAssistant => ChatRole.Assistant,
+        MessageRole.RoleTool => ChatRole.Tool,
+        _ => ChatRole.Assistant
+    };
+
+    internal static ChatFinishReason? Convert(this FinishReason finishReason) => finishReason switch
+    {
+        FinishReason.ReasonStop => ChatFinishReason.Stop,
+        FinishReason.ReasonMaxLen => ChatFinishReason.Length,
+        FinishReason.ReasonToolCalls => ChatFinishReason.ToolCalls,
+        FinishReason.ReasonMaxContext => ChatFinishReason.Length,
+        FinishReason.ReasonTimeLimit => ChatFinishReason.Length,
+        _ => null
+    };
+
+    internal static UsageDetails? Convert(this SamplingUsage usage) => usage == null ? null : new()
+    {
+        InputTokenCount = usage.PromptTokens,
+        OutputTokenCount = usage.CompletionTokens,
+        TotalTokenCount = usage.TotalTokens
+    };
+
+    internal static CitationAnnotation FromCitationUrl(this string citationUrl)
+    {
+        var url = new Uri(citationUrl);
+        if (url.Scheme != "collections")
+            return new CitationAnnotation { Url = url };
+
+        // Special-case collection citations so we get better metadata
+        var collection = url.Host;
+        var file = url.AbsolutePath[7..];
+
+        return new CitationAnnotation
+        {
+            AdditionalProperties = new AdditionalPropertiesDictionary
+            {
+                { "collection_id", collection }
+            },
+            FileId = file,
+            ToolName = "collections_search",
+            Url = new Uri($"collections://{collection}/files/{file}"),
+        };
+    }
 
     [JsonSourceGenerationOptions(JsonSerializerDefaults.Web,
         UseStringEnumConverter = true,
