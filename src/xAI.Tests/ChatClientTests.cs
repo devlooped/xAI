@@ -2,7 +2,10 @@
 using System.Text.Json.Nodes;
 using Azure;
 using Devlooped.Extensions.AI;
+using Google.Protobuf;
 using Grpc.Core;
+using Grpc.Core.Interceptors;
+using Grpc.Net.Client;
 using Microsoft.Extensions.AI;
 using Moq;
 using OpenAI;
@@ -784,6 +787,43 @@ public class ChatClientTests(ITestOutputHelper output)
         var imageContent = userMessage.Content[1].ImageUrl;
         Assert.NotNull(imageContent);
         Assert.Equal(imageUri.ToString(), imageContent.ImageUrl);
+    }
+
+    [Fact]
+    public async Task GrokPreservesEndUserIdFromClientOptions()
+    {
+        GetCompletionsRequest? capturedRequest = null;
+        var invoker = new Mock<CallInvoker>();
+        invoker.Setup(x => x.AsyncUnaryCall(
+                It.IsAny<Method<GetCompletionsRequest, GetChatCompletionResponse>>(),
+                It.IsAny<string>(),
+                It.IsAny<CallOptions>(),
+                It.IsAny<GetCompletionsRequest>()))
+            .Callback<Method<GetCompletionsRequest, GetChatCompletionResponse>, string, CallOptions, GetCompletionsRequest>(
+                (_, _, _, req) => capturedRequest = req)
+            .Returns(CallHelpers.CreateAsyncUnaryCall(new GetChatCompletionResponse
+            {
+                Outputs =
+                {
+                    new CompletionOutput
+                    {
+                        Message = new CompletionMessage { Content = "Hello!" }
+                    }
+                }
+            }));
+
+        var client = new GrokClient(new TestGrpcChannel(invoker.Object), new GrokClientOptions { EndUserId = "kzu" });
+        var chat = client.GetChatClient();
+        var grok = chat.AsIChatClient("grok");
+        await grok.GetResponseAsync("Hi");
+
+        Assert.NotNull(capturedRequest);
+        Assert.Equal("kzu", capturedRequest.User);
+    }
+
+    class TestGrpcChannel(CallInvoker invoker) : ChannelBase("test")
+    {
+        public override CallInvoker CreateCallInvoker() => invoker;
     }
 
     record Response(DateOnly Today, string Release, decimal Price);

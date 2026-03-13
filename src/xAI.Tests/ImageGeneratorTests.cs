@@ -372,4 +372,34 @@ public class ImageGeneratorTests(ITestOutputHelper output)
         Assert.Equal("xai", metadata.ProviderName);
         Assert.Equal("grok-imagine-image", metadata.DefaultModelId);
     }
+
+    [Fact]
+    public async Task GrokPreservesEndUserIdFromClientOptions()
+    {
+        GenerateImageRequest? capturedRequest = null;
+        var invoker = new Mock<CallInvoker>();
+        invoker.Setup(x => x.AsyncUnaryCall(
+                It.IsAny<Method<GenerateImageRequest, ImageResponse>>(),
+                It.IsAny<string>(),
+                It.IsAny<CallOptions>(),
+                It.IsAny<GenerateImageRequest>()))
+            .Callback<Method<GenerateImageRequest, ImageResponse>, string, CallOptions, GenerateImageRequest>(
+                (_, _, _, req) => capturedRequest = req)
+            .Returns(CallHelpers.CreateAsyncUnaryCall(new ImageResponse
+            {
+            }));
+
+        var client = new GrokClient(new TestGrpcChannel(invoker.Object), new GrokClientOptions { EndUserId = "kzu" });
+        var images = client.GetImageClient();
+        var grok = images.AsIImageGenerator("grok");
+        await grok.GenerateAsync(new ImageGenerationRequest { Prompt = "Generate a lion." });
+
+        Assert.NotNull(capturedRequest);
+        Assert.Equal("kzu", capturedRequest.User);
+    }
+
+    class TestGrpcChannel(CallInvoker invoker) : ChannelBase("test")
+    {
+        public override CallInvoker CreateCallInvoker() => invoker;
+    }
 }
