@@ -1,6 +1,7 @@
 ﻿using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Net.Http.Headers;
+using Grpc.Core;
 using Grpc.Net.Client;
 using Microsoft.Extensions.Http;
 using Polly;
@@ -14,10 +15,13 @@ namespace xAI;
 /// <param name="options">The options used to configure the client.</param>
 public sealed class GrokClient(string apiKey, GrokClientOptions options) : IDisposable
 {
-    static readonly ConcurrentDictionary<(Uri, string), GrpcChannel> channels = [];
+    static readonly ConcurrentDictionary<(Uri, string), ChannelBase> channels = [];
 
     /// <summary>Initializes a new instance of the <see cref="GrokClient"/> class with default options.</summary>
     public GrokClient(string apiKey) : this(apiKey, new GrokClientOptions()) { }
+
+    internal GrokClient(ChannelBase channel, GrokClientOptions options) : this("", options)
+        => channels[(options.Endpoint, "")] = channel;
 
     /// <summary>Gets the API key used for authentication.</summary>
     public string ApiKey { get; } = apiKey;
@@ -32,7 +36,7 @@ public sealed class GrokClient(string apiKey, GrokClientOptions options) : IDisp
     public Auth.AuthClient GetAuthClient() => new(Channel);
 
     /// <summary>Gets a new instance of <see cref="Chat.ChatClient"/> that reuses the client configuration details provided to the <see cref="GrokClient"/> instance.</summary>
-    public Chat.ChatClient GetChatClient() => new(Channel);
+    public Chat.ChatClient GetChatClient() => new(Channel, Options);
 
     /// <summary>Gets a new instance of <see cref="Documents.DocumentsClient"/> that reuses the client configuration details provided to the <see cref="GrokClient"/> instance.</summary>
     public Documents.DocumentsClient GetDocumentsClient() => new(Channel);
@@ -41,7 +45,7 @@ public sealed class GrokClient(string apiKey, GrokClientOptions options) : IDisp
     public Embedder.EmbedderClient GetEmbedderClient() => new(Channel);
 
     /// <summary>Gets a new instance of <see cref="Image.ImageClient"/> that reuses the client configuration details provided to the <see cref="GrokClient"/> instance.</summary>
-    public Image.ImageClient GetImageClient() => new(Channel);
+    public Image.ImageClient GetImageClient() => new(Channel, Options);
 
     /// <summary>Gets a new instance of <see cref="Models.ModelsClient"/> that reuses the client configuration details provided to the <see cref="GrokClient"/> instance.</summary>
     public Models.ModelsClient GetModelsClient() => new(Channel);
@@ -49,7 +53,7 @@ public sealed class GrokClient(string apiKey, GrokClientOptions options) : IDisp
     /// <summary>Gets a new instance of <see cref="Tokenize.TokenizeClient"/> that reuses the client configuration details provided to the <see cref="GrokClient"/> instance.</summary>
     public Tokenize.TokenizeClient GetTokenizeClient() => new(Channel);
 
-    internal GrpcChannel Channel => channels.GetOrAdd((Endpoint, ApiKey), key =>
+    internal ChannelBase Channel => channels.GetOrAdd((Endpoint, ApiKey), key =>
     {
         var inner = Options.ChannelOptions?.HttpHandler;
         if (inner == null)
@@ -59,9 +63,9 @@ public sealed class GrokClient(string apiKey, GrokClientOptions options) : IDisp
             var retryPolicy = HttpPolicyExtensions
                 .HandleTransientHttpError()
                 .Or<Grpc.Core.RpcException>(ex =>
-                    ex.StatusCode is Grpc.Core.StatusCode.Unavailable or
-                                     Grpc.Core.StatusCode.DeadlineExceeded or
-                                     Grpc.Core.StatusCode.Internal &&
+                    ex.StatusCode is StatusCode.Unavailable or
+                                     StatusCode.DeadlineExceeded or
+                                     StatusCode.Internal &&
                     ex.Status.Detail?.Contains("504") == true ||
                     ex.Status.Detail?.Contains("INTERNAL_ERROR") == true)
                 .WaitAndRetryAsync(

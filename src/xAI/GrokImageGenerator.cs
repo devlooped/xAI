@@ -1,3 +1,4 @@
+using Grpc.Core;
 using Grpc.Net.Client;
 using Microsoft.Extensions.AI;
 using xAI.Protocol;
@@ -27,22 +28,24 @@ sealed class GrokImageGenerator : IImageGenerator
 
     readonly ImageGeneratorMetadata metadata;
     readonly ImageClient imageClient;
+    readonly GrokClientOptions clientOptions;
     readonly string defaultModelId;
 
-    internal GrokImageGenerator(GrpcChannel channel, GrokClientOptions clientOptions, string defaultModelId)
-        : this(new ImageClient(channel), clientOptions, defaultModelId)
+    internal GrokImageGenerator(ChannelBase channel, GrokClientOptions options, string defaultModelId)
+        : this(new ImageClient(channel, options), options, defaultModelId)
     { }
 
     /// <summary>
     /// Test constructor.
     /// </summary>
     internal GrokImageGenerator(ImageClient imageClient, string defaultModelId)
-        : this(imageClient, new(), defaultModelId)
+        : this(imageClient, imageClient.Options as GrokClientOptions ?? new(), defaultModelId)
     { }
 
     GrokImageGenerator(ImageClient imageClient, GrokClientOptions clientOptions, string defaultModelId)
     {
         this.imageClient = imageClient;
+        this.clientOptions = clientOptions;
         this.defaultModelId = defaultModelId;
         metadata = new ImageGeneratorMetadata("xai", clientOptions.Endpoint, defaultModelId);
     }
@@ -58,6 +61,9 @@ sealed class GrokImageGenerator : IImageGenerator
             Prompt = Throw.IfNull(Throw.IfNull(request).Prompt, "request.Prompt"),
             Model = options?.ModelId ?? defaultModelId,
         };
+
+        if (clientOptions.EndUserId is { } user)
+            protocolRequest.User = clientOptions.EndUserId;
 
         if (options?.Count is { } count)
             protocolRequest.N = count;

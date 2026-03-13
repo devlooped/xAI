@@ -15,7 +15,7 @@ class GrokChatClient : IChatClient
     readonly string defaultModelId;
     readonly GrokClientOptions clientOptions;
 
-    internal GrokChatClient(GrpcChannel channel, GrokClientOptions clientOptions, string defaultModelId)
+    internal GrokChatClient(ChannelBase channel, GrokClientOptions clientOptions, string defaultModelId)
         : this(new ChatClient(channel), clientOptions, defaultModelId)
     { }
 
@@ -23,10 +23,10 @@ class GrokChatClient : IChatClient
     /// Test constructor.
     /// </summary>
     internal GrokChatClient(ChatClient client, string defaultModelId)
-        : this(client, new(), defaultModelId)
+        : this(client, client.Options as GrokClientOptions ?? new(), defaultModelId)
     { }
 
-    GrokChatClient(ChatClient client, GrokClientOptions clientOptions, string defaultModelId)
+    internal GrokChatClient(ChatClient client, GrokClientOptions clientOptions, string defaultModelId)
     {
         this.client = client;
         this.clientOptions = clientOptions;
