@@ -18,16 +18,6 @@ using OpenAIClientOptions = OpenAI.OpenAIClientOptions;
 
 namespace xAI.Tests;
 
-// TODO: remove when shipped upstream in Chat
-public static class ChatExtensions
-{
-    public static void AddRange(this Chat chat, IEnumerable<ChatMessage> messages)
-    {
-        foreach (var message in messages)
-            chat.Add(message);
-    }
-}
-
 public class ChatClientTests(ITestOutputHelper output)
 {
     [SecretsFact("OPENAI_API_KEY")]
