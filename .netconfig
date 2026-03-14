@@ -157,8 +157,8 @@
 	weak
 [file "src/xAI.Protocol/deferred.proto"]
 	url = https://github.com/xai-org/xai-proto/blob/main/proto/xai/api/v1/deferred.proto
-	sha = 626a3a3f22d8aa11c7a185bf8902e7d415df0462
-	etag = d47b84dddfc4252abbced302fde18ea8093933a3a8d5516350db596d3ae86595
+	sha = 2b1a1fc74c463f55ec92af764d4b790f4def2a24
+	etag = 246c0340096b0dbc754ceb4933bde0ebf92af049ebffb06ed1fef1840d04c46b
 	weak
 [file "src/xAI.Protocol/documents.proto"]
 	url = https://github.com/xai-org/xai-proto/blob/main/proto/xai/api/v1/documents.proto
@@ -197,8 +197,8 @@
 	weak
 [file "src/xAI.Protocol/video.proto"]
 	url = https://github.com/xai-org/xai-proto/blob/main/proto/xai/api/v1/video.proto
-	sha = 1813f69cd0fafba12eea98996cb6da15f29396b9
-	etag = 69bb5336a09ae73e22e5d1a8af2d65386953face7d0b57917478e56e1c2fc5c6
+	sha = 2b1a1fc74c463f55ec92af764d4b790f4def2a24
+	etag = 8c6fc74c92943443aa72c0dcdf5d546e6e553545ddb5b634d0128f56f9f52dce
 	weak
 [file "src/xAI.Protocol/google/protobuf/timestamp.proto"]
 	url = https://github.com/protocolbuffers/protobuf/blob/main/src/google/protobuf/timestamp.proto
