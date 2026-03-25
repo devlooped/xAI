@@ -248,10 +248,6 @@ class GrokChatClient : IChatClient
             if (gmsg.Content.Count == 0 && gmsg.ToolCalls.Count == 0)
                 continue;
 
-            // If we have only tool calls and no content, the gRPC enpoint fails, so add an empty one.
-            if (gmsg.Content.Count == 0)
-                gmsg.Content.Add(new Content());
-
             request.Messages.Add(gmsg);
         }
 
