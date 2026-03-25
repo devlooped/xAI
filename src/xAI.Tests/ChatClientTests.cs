@@ -706,6 +706,42 @@ public class ChatClientTests(ITestOutputHelper output)
     }
 
     [Fact]
+    public async Task GrokDoesNotAddEmptyContentToToolCallOnlyMessages()
+    {
+        GetCompletionsRequest? capturedRequest = null;
+        var client = new Mock<xAI.Protocol.Chat.ChatClient>(MockBehavior.Strict);
+        client.Setup(x => x.GetCompletionAsync(It.IsAny<GetCompletionsRequest>(), null, null, CancellationToken.None))
+            .Callback<GetCompletionsRequest, Metadata?, DateTime?, CancellationToken>((req, _, _, _) => capturedRequest = req)
+            .Returns(CallHelpers.CreateAsyncUnaryCall(new GetChatCompletionResponse
+            {
+                Outputs =
+                {
+                    new CompletionOutput
+                    {
+                        Message = new CompletionMessage { Content = "Done" }
+                    }
+                }
+            }));
+
+        var grok = new GrokChatClient(client.Object, "grok-4-1-fast-non-reasoning");
+        var messages = new List<ChatMessage>
+        {
+            new(ChatRole.User, "What's the time?"),
+            // Assistant message with only a tool call and no text content
+            new(ChatRole.Assistant, [new FunctionCallContent("call-789", "get_time")]),
+            new(ChatRole.Tool, [new FunctionResultContent("call-789", "2024-01-01T00:00:00Z")]),
+        };
+
+        await grok.GetResponseAsync(messages);
+
+        Assert.NotNull(capturedRequest);
+        // Every Content item in every message must be non-empty; an empty Content block
+        // causes the API to return StatusCode="InvalidArgument", Detail="Empty content block".
+        Assert.DoesNotContain(capturedRequest.Messages,
+            m => m.Content.Any(c => c.CalculateSize() == 0));
+    }
+
+    [Fact]
     public async Task GrokSendsDataContentAsBase64ImageUrl()
     {
         GetCompletionsRequest? capturedRequest = null;
