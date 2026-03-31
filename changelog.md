@@ -1,5 +1,21 @@
 # Changelog
 
+## [v2.0.4](https://github.com/devlooped/xAI/tree/v2.0.4) (2026-03-31)
+
+[Full Changelog](https://github.com/devlooped/xAI/compare/v2.0.3...v2.0.4)
+
+:sparkles: Implemented enhancements:
+
+- ⬆️ Bump files with dotnet-file sync [\#99](https://github.com/devlooped/xAI/pull/99) (@kzu)
+
+:bug: Fixed bugs:
+
+- Ensure we preserve EndUser client option across chat/image [\#97](https://github.com/devlooped/xAI/pull/97) (@kzu)
+
+:twisted_rightwards_arrows: Merged:
+
+- fix: remove empty Content block from tool-call-only messages [\#104](https://github.com/devlooped/xAI/pull/104) (@zarusz)
+
 ## [v2.0.3](https://github.com/devlooped/xAI/tree/v2.0.3) (2026-03-12)
 
 [Full Changelog](https://github.com/devlooped/xAI/compare/v2.0.2...v2.0.3)
