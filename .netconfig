@@ -80,8 +80,8 @@
 	weak
 [file ".gitignore"]
 	url = https://github.com/devlooped/oss/blob/main/.gitignore
-	sha = 3776526342afb3f57da7e80f2095e5fdca3c31c9
-	etag = 11767f73556aa4c6c8bcc153b77ee8e8114f99fa3b885b0a7d66d082f91e77b3
+	sha = a225b7a9f609f26bcc24e0d84f663387be251a7d
+	etag = 20a8b49d57024abbd85aac5b0020c30e5eb68e0384b2761e93727c8780c4a991
 	weak
 [file "Directory.Build.rsp"]
 	url = https://github.com/devlooped/oss/blob/main/Directory.Build.rsp
@@ -152,13 +152,13 @@
 	weak
 [file "src/xAI.Protocol/chat.proto"]
 	url = https://github.com/xai-org/xai-proto/blob/main/proto/xai/api/v1/chat.proto
-	sha = 712e28ae9319e881d6dd6473d22566d61fe22854
-	etag = d68802a822549776b7acdc0c03a226c913375f588a7938b48741ea5d1852ef02
+	sha = 6473565631bba0e29fbc11dfb3a66a98dd72d496
+	etag = 881e524631d7e6d7a7244f34bf8d99ad0c3dc149146c3a89d0bb626586f99c7f
 	weak
 [file "src/xAI.Protocol/deferred.proto"]
 	url = https://github.com/xai-org/xai-proto/blob/main/proto/xai/api/v1/deferred.proto
-	sha = 626a3a3f22d8aa11c7a185bf8902e7d415df0462
-	etag = d47b84dddfc4252abbced302fde18ea8093933a3a8d5516350db596d3ae86595
+	sha = 2b1a1fc74c463f55ec92af764d4b790f4def2a24
+	etag = 246c0340096b0dbc754ceb4933bde0ebf92af049ebffb06ed1fef1840d04c46b
 	weak
 [file "src/xAI.Protocol/documents.proto"]
 	url = https://github.com/xai-org/xai-proto/blob/main/proto/xai/api/v1/documents.proto
@@ -197,8 +197,8 @@
 	weak
 [file "src/xAI.Protocol/video.proto"]
 	url = https://github.com/xai-org/xai-proto/blob/main/proto/xai/api/v1/video.proto
-	sha = 1813f69cd0fafba12eea98996cb6da15f29396b9
-	etag = 69bb5336a09ae73e22e5d1a8af2d65386953face7d0b57917478e56e1c2fc5c6
+	sha = 43a1b6b731943b8f031c2f2d946f7183f0933ffd
+	etag = 37562e78a6d64800b09c643632a33b6bc902955b491114bd5b6ec957d23d6e64
 	weak
 [file "src/xAI.Protocol/google/protobuf/timestamp.proto"]
 	url = https://github.com/protocolbuffers/protobuf/blob/main/src/google/protobuf/timestamp.proto
@@ -219,4 +219,14 @@
 	url = https://github.com/protocolbuffers/protobuf/blob/main/src/google/protobuf/any.proto
 	sha = 97921a5fc1d2685d30fb6e74b283a0a6d81660dc
 	etag = dcadaf10862661d714d4738a8255af4e80344343b45f1fa53260ff4778e3e88b
+	weak
+[file "oss.cs"]
+	url = https://github.com/devlooped/oss/blob/main/oss.cs
+	sha = 9c2f8c729d7cd3dd052b5a09d12fb1f3926247e5
+	etag = e195cacdb0c6ea7ca768514ec94f8595d008c7f5aae805b39beec330895045e3
+	weak
+[file "readme.tmp.md"]
+	url = https://github.com/devlooped/oss/blob/main/readme.tmp.md
+	sha = 2cc4ada8059b1e2e3f32089e67dab27a8ddeb7fb
+	etag = c7c0694bd13d2d7fdc8b0530c80d5cf032cb9fdaaa5e1f814e951e9e6489746a
 	weak
