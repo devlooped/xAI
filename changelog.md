@@ -1,5 +1,21 @@
 # Changelog
 
+## [v2.0.5](https://github.com/devlooped/xAI/tree/v2.0.5) (2026-04-08)
+
+[Full Changelog](https://github.com/devlooped/xAI/compare/v2.0.4...v2.0.5)
+
+:sparkles: Implemented enhancements:
+
+- Add support for inline data and url file attachements [\#107](https://github.com/devlooped/xAI/pull/107) (@kzu)
+
+:bug: Fixed bugs:
+
+- Fix ChatOptions.Instructions ignored in completions requests [\#110](https://github.com/devlooped/xAI/pull/110) (@kzu)
+
+:twisted_rightwards_arrows: Merged:
+
+- Document new file attachments support [\#108](https://github.com/devlooped/xAI/pull/108) (@kzu)
+
 ## [v2.0.4](https://github.com/devlooped/xAI/tree/v2.0.4) (2026-03-31)
 
 [Full Changelog](https://github.com/devlooped/xAI/compare/v2.0.3...v2.0.4)
