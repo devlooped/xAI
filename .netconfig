@@ -152,8 +152,8 @@
 	weak
 [file "src/xAI.Protocol/chat.proto"]
 	url = https://github.com/xai-org/xai-proto/blob/main/proto/xai/api/v1/chat.proto
-	sha = 6473565631bba0e29fbc11dfb3a66a98dd72d496
-	etag = 881e524631d7e6d7a7244f34bf8d99ad0c3dc149146c3a89d0bb626586f99c7f
+	sha = e0c743ba0dcd0a7f9b71a4a0d846c6ff3a9b7e4a
+	etag = 8656b4676c39de9d83c9dd8d102e3fce04df98f940536166baf41f893ba56f5d
 	weak
 [file "src/xAI.Protocol/deferred.proto"]
 	url = https://github.com/xai-org/xai-proto/blob/main/proto/xai/api/v1/deferred.proto
@@ -222,8 +222,8 @@
 	weak
 [file "oss.cs"]
 	url = https://github.com/devlooped/oss/blob/main/oss.cs
-	sha = 9c2f8c729d7cd3dd052b5a09d12fb1f3926247e5
-	etag = e195cacdb0c6ea7ca768514ec94f8595d008c7f5aae805b39beec330895045e3
+	sha = c8c6644c8f0e6ca938eae48b2dcd49084a7a8c09
+	etag = 10312a2096542c1214389009e24a40c989f869c5f2fd77a8294f12276c82cfb7
 	weak
 [file "readme.tmp.md"]
 	url = https://github.com/devlooped/oss/blob/main/readme.tmp.md
