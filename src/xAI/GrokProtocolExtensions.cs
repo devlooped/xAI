@@ -238,6 +238,14 @@ public static partial class GrokProtocolExtensions
         if (options?.TopP is { } topP) request.TopP = topP;
         if (options?.FrequencyPenalty is { } frequencyPenalty) request.FrequencyPenalty = frequencyPenalty;
         if (options?.PresencePenalty is { } presencePenalty) request.PresencePenalty = presencePenalty;
+        if (options?.Instructions is { Length: > 0 } instructions)
+        {
+            request.Messages.Insert(0, new Message
+            {
+                Role = MessageRole.RoleSystem,
+                Content = { new Content { Text = instructions } }
+            });
+        }
 
         foreach (var message in messages)
         {
