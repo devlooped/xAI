@@ -44,6 +44,7 @@
 
   <ItemGroup>
     <None Update=".env" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="preferences.pdf" CopyToOutputDirectory="PreserveNewest" />
     <None Update="Content\**\*.*;*.md" CopyToOutputDirectory="PreserveNewest" />
     <Content Update="Content\**\*.*" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="*.json;*.ini;*.toml" Exclude="@(Content)" CopyToOutputDirectory="PreserveNewest" />

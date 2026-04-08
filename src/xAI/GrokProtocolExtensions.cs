@@ -221,6 +221,195 @@ public static partial class GrokProtocolExtensions
         }
     }
 
+    /// <summary>Converts messages and optional options to an xAI protocol completions request.</summary>
+    internal static GetCompletionsRequest AsCompletionsRequest(this IGrokChatClient client, IEnumerable<ChatMessage> messages, ChatOptions? options = null)
+    {
+        var request = options?.RawRepresentationFactory?.Invoke(client) as GetCompletionsRequest ?? new GetCompletionsRequest()
+        {
+            Model = options?.ModelId ?? client.DefaultModelId,
+        };
+
+        if (string.IsNullOrEmpty(request.Model))
+            request.Model = options?.ModelId ?? client.DefaultModelId;
+
+        if ((options?.EndUserId ?? client.EndUserId) is { } user) request.User = user;
+        if (options?.MaxOutputTokens is { } maxTokens) request.MaxTokens = maxTokens;
+        if (options?.Temperature is { } temperature) request.Temperature = temperature;
+        if (options?.TopP is { } topP) request.TopP = topP;
+        if (options?.FrequencyPenalty is { } frequencyPenalty) request.FrequencyPenalty = frequencyPenalty;
+        if (options?.PresencePenalty is { } presencePenalty) request.PresencePenalty = presencePenalty;
+
+        foreach (var message in messages)
+        {
+            if (message.RawRepresentation is Message input)
+            {
+                request.Messages.Add(input);
+                continue;
+            }
+            else if (message.RawRepresentation is CompletionMessage completion)
+            {
+                request.Messages.Add(completion.AsMessage());
+                continue;
+            }
+
+            var gmsg = new Message { Role = message.Role.Convert() };
+
+            foreach (var content in message.Contents)
+            {
+                if (content.RawRepresentation is CompletionMessage completion)
+                {
+                    request.Messages.Add(completion.AsMessage());
+                    continue;
+                }
+                if (content.RawRepresentation is Content protoContent)
+                {
+                    gmsg.Content.Add(protoContent);
+                    continue;
+                }
+
+                if (content is TextContent textContent && !string.IsNullOrEmpty(textContent.Text))
+                {
+                    gmsg.Content.Add(new Content { Text = textContent.Text });
+                }
+                else if (content is TextReasoningContent reasoning)
+                {
+                    gmsg.ReasoningContent = reasoning.Text;
+                    gmsg.EncryptedContent = reasoning.ProtectedData;
+                }
+                else if (content is DataContent dataContent)
+                {
+                    gmsg.Content.Add(new Content
+                    {
+                        File = new FileContent
+                        {
+                            Data = Google.Protobuf.ByteString.CopyFrom(dataContent.Data.Span),
+                            MimeType = dataContent.MediaType,
+                            Filename = dataContent.Name ?? "",
+                        }
+                    });
+                    //gmsg.Content.Add(new Content { ImageUrl = new ImageUrlContent { ImageUrl = $"data:{dataContent.MediaType};base64,{System.Convert.ToBase64String(dataContent.Data.Span)}" } });
+                }
+                else if (content is UriContent uriContent)
+                {
+                    if (uriContent.HasTopLevelMediaType("image"))
+                    {
+                        gmsg.Content.Add(new Content
+                        {
+                            ImageUrl = new ImageUrlContent { ImageUrl = uriContent.Uri.ToString() },
+                        });
+                    }
+                    else
+                    {
+                        gmsg.Content.Add(new Content
+                        {
+                            File = new FileContent
+                            {
+                                Url = uriContent.Uri.ToString(),
+                                MimeType = uriContent.MediaType
+                            }
+                        });
+                    }
+                }
+                else if (content.RawRepresentation is ToolCall toolCall)
+                {
+                    gmsg.ToolCalls.Add(toolCall);
+                }
+                else if (content is FunctionCallContent functionCall)
+                {
+                    gmsg.ToolCalls.Add(new ToolCall
+                    {
+                        Id = functionCall.CallId,
+                        Type = ToolCallType.ClientSideTool,
+                        Function = new FunctionCall
+                        {
+                            Name = functionCall.Name,
+                            Arguments = JsonSerializer.Serialize(functionCall.Arguments)
+                        }
+                    });
+                }
+                else if (content is FunctionResultContent resultContent)
+                {
+                    var msg = new Message
+                    {
+                        Role = MessageRole.RoleTool,
+                        Content = { new Content { Text = JsonSerializer.Serialize(resultContent.Result) ?? "null" } }
+                    };
+
+                    if (resultContent.CallId is { Length: > 0 } callId)
+                        msg.ToolCallId = callId;
+
+                    request.Messages.Add(msg);
+                }
+                else if (content is McpServerToolResultContent mcpResult &&
+                    mcpResult.RawRepresentation is ToolCall mcpToolCall &&
+                    // TODO: what if there are multiple outputs?
+                    mcpResult.Outputs is { Count: 1 } &&
+                    mcpResult.Outputs[0] is TextContent mcpText)
+                {
+                    request.Messages.Add(new Message
+                    {
+                        Role = MessageRole.RoleTool,
+                        ToolCalls = { mcpToolCall },
+                        Content = { new Content { Text = mcpText.Text } }
+                    });
+                }
+                else if (content is CodeInterpreterToolResultContent codeResult &&
+                    codeResult.RawRepresentation is ToolCall codeToolCall &&
+                    // TODO: what if there are multiple outputs?
+                    codeResult.Outputs is { Count: 1 } &&
+                    codeResult.Outputs[0] is TextContent codeText)
+                {
+                    request.Messages.Add(new Message
+                    {
+                        Role = MessageRole.RoleTool,
+                        ToolCalls = { codeToolCall },
+                        Content = { new Content { Text = codeText.Text } }
+                    });
+                }
+            }
+
+            if (gmsg.Content.Count == 0 && gmsg.ToolCalls.Count == 0)
+                continue;
+
+            request.Messages.Add(gmsg);
+        }
+
+        if (options is GrokChatOptions grokOptions)
+        {
+            request.Include.AddRange(grokOptions.Include);
+
+            if (grokOptions.Search.HasFlag(GrokSearch.X))
+            {
+                (options.Tools ??= []).Insert(0, new GrokXSearchTool());
+            }
+            else if (grokOptions.Search.HasFlag(GrokSearch.Web))
+            {
+                (options.Tools ??= []).Insert(0, new GrokSearchTool());
+            }
+
+            request.UseEncryptedContent = grokOptions.UseEncryptedContent;
+        }
+
+        if (options?.Tools is not null)
+        {
+            foreach (var tool in options.Tools.Select(x => x.AsProtocolTool(options)))
+                if (tool is not null) request.Tools.Add(tool);
+        }
+
+        if (options?.ResponseFormat is ChatResponseFormatJson jsonFormat)
+        {
+            request.ResponseFormat = new ResponseFormat { FormatType = FormatType.JsonObject };
+            if (jsonFormat.Schema != null)
+            {
+                request.ResponseFormat.FormatType = FormatType.JsonSchema;
+                request.ResponseFormat.Schema = jsonFormat.Schema?.ToString();
+            }
+        }
+
+        return request;
+    }
+
+
     internal static IEnumerable<AIContent> AsContents(this IEnumerable<ToolCall> toolCalls, string? content = default, List<AIAnnotation>? annotations = default)
     {
         foreach (var toolCall in toolCalls)
