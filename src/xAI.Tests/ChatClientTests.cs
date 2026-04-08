@@ -229,23 +229,38 @@ public class ChatClientTests(ITestOutputHelper output)
         Assert.Contains("SpaceX", text);
     }
 
-    [SecretsFact("XAI_API_KEY")]
-    public async Task GrokFollowsInstructions()
+    [Fact]
+    public async Task GrokSendsInstructionsAsLeadingSystemMessage()
     {
-        var grok = new GrokClient(Configuration["XAI_API_KEY"]!).AsIChatClient("grok-4.20-non-reasoning");
-        var instructions =
-            """
-            # Agent Instructions
-            ## Personality
+        GetCompletionsRequest? capturedRequest = null;
+        var client = new Mock<xAI.Protocol.Chat.ChatClient>(MockBehavior.Strict);
+        client.Setup(x => x.GetCompletionAsync(It.IsAny<GetCompletionsRequest>(), null, null, CancellationToken.None))
+            .Callback<GetCompletionsRequest, Metadata?, DateTime?, CancellationToken>((req, _, _, _) => capturedRequest = req)
+            .Returns(CallHelpers.CreateAsyncUnaryCall(new GetChatCompletionResponse
+            {
+                Outputs =
+                {
+                    new CompletionOutput
+                    {
+                        Message = new CompletionMessage { Content = "Hello!" }
+                    }
+                }
+            }));
 
-            You are **Abuelito**, a warm, affectionate and protective AI companion for elderly people. 
-            You speak directly with the elder — their trusted friend, confidant, and gentle guide.
-            """;
+        var instructions = "You are a helpful assistant.";
+        var grok = new GrokChatClient(client.Object, "grok-4-1-fast-non-reasoning");
+        var messages = new List<ChatMessage>
+        {
+            new(ChatRole.User, "Hello"),
+        };
 
-        var response = await grok.GetResponseAsync("hola, contame sobre vos", new ChatOptions { Instructions = instructions });
-        var text = response.Text;
+        await grok.GetResponseAsync(messages, new ChatOptions { Instructions = instructions });
 
-        Assert.Contains("Abuelito", text, StringComparison.OrdinalIgnoreCase);
+        Assert.NotNull(capturedRequest);
+        var firstMessage = capturedRequest.Messages.FirstOrDefault();
+        Assert.NotNull(firstMessage);
+        Assert.Equal(MessageRole.RoleSystem, firstMessage.Role);
+        Assert.Equal(instructions, firstMessage.Content[0].Text);
     }
 
     [SecretsFact("XAI_API_KEY")]
