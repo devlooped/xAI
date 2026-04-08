@@ -1,20 +1,13 @@
 ﻿using System.Text.Json;
-using System.Text.Json.Nodes;
-using Azure;
 using Devlooped.Extensions.AI;
-using Google.Protobuf;
 using Grpc.Core;
-using Grpc.Core.Interceptors;
-using Grpc.Net.Client;
 using Microsoft.Extensions.AI;
 using Moq;
 using OpenAI;
 using Tests.Client.Helpers;
-using xAI;
 using xAI.Protocol;
 using static ConfigurationExtensions;
 using Chat = Devlooped.Extensions.AI.Chat;
-using OpenAIClientOptions = OpenAI.OpenAIClientOptions;
 
 namespace xAI.Tests;
 
@@ -217,6 +210,23 @@ public class ChatClientTests(ITestOutputHelper output)
             .ToList();
 
         Assert.Contains("catedralaltapatagonia.com", citations);
+    }
+
+    [SecretsFact("XAI_API_KEY")]
+    public async Task GrokPerformsInlineFileSearch()
+    {
+        var grok = new GrokClient(Configuration["XAI_API_KEY"]!).AsIChatClient("grok-4-1-fast-non-reasoning");
+
+        var message = new ChatMessage(ChatRole.User,
+            [
+                new DataContent(File.ReadAllBytes("preferences.pdf"), "application/pdf"),
+                new TextContent("what's my favorite company?")
+            ]);
+
+        var response = await grok.GetResponseAsync(message);
+        var text = response.Text;
+
+        Assert.Contains("SpaceX", text);
     }
 
     [SecretsFact("XAI_API_KEY")]
@@ -742,43 +752,6 @@ public class ChatClientTests(ITestOutputHelper output)
     }
 
     [Fact]
-    public async Task GrokSendsDataContentAsBase64ImageUrl()
-    {
-        GetCompletionsRequest? capturedRequest = null;
-        var client = new Mock<xAI.Protocol.Chat.ChatClient>(MockBehavior.Strict);
-        client.Setup(x => x.GetCompletionAsync(It.IsAny<GetCompletionsRequest>(), null, null, CancellationToken.None))
-            .Callback<GetCompletionsRequest, Metadata?, DateTime?, CancellationToken>((req, _, _, _) => capturedRequest = req)
-            .Returns(CallHelpers.CreateAsyncUnaryCall(new GetChatCompletionResponse
-            {
-                Outputs =
-                {
-                    new CompletionOutput
-                    {
-                        Message = new CompletionMessage { Content = "I see an image." }
-                    }
-                }
-            }));
-
-        var imageBytes = new byte[] { 1, 2, 3, 4, 5 };
-        var grok = new GrokChatClient(client.Object, "grok-4-1-fast-non-reasoning");
-        var messages = new List<ChatMessage>
-        {
-            new(ChatRole.User, [new TextContent("What do you see?"), new DataContent(imageBytes, "image/png")]),
-        };
-
-        await grok.GetResponseAsync(messages);
-
-        Assert.NotNull(capturedRequest);
-        var userMessage = capturedRequest.Messages.FirstOrDefault(m => m.Role == MessageRole.RoleUser);
-        Assert.NotNull(userMessage);
-        Assert.Equal(2, userMessage.Content.Count);
-        Assert.Equal("What do you see?", userMessage.Content[0].Text);
-        var imageContent = userMessage.Content[1].ImageUrl;
-        Assert.NotNull(imageContent);
-        Assert.Equal($"data:image/png;base64,{Convert.ToBase64String(imageBytes)}", imageContent.ImageUrl);
-    }
-
-    [Fact]
     public async Task GrokSendsUriContentAsImageUrl()
     {
         GetCompletionsRequest? capturedRequest = null;
@@ -813,6 +786,45 @@ public class ChatClientTests(ITestOutputHelper output)
         var imageContent = userMessage.Content[1].ImageUrl;
         Assert.NotNull(imageContent);
         Assert.Equal(imageUri.ToString(), imageContent.ImageUrl);
+    }
+
+    [Fact]
+    public async Task GrokSendsDataUriContentAsData()
+    {
+        GetCompletionsRequest? capturedRequest = null;
+        var client = new Mock<xAI.Protocol.Chat.ChatClient>(MockBehavior.Strict);
+        client.Setup(x => x.GetCompletionAsync(It.IsAny<GetCompletionsRequest>(), null, null, CancellationToken.None))
+            .Callback<GetCompletionsRequest, Metadata?, DateTime?, CancellationToken>((req, _, _, _) => capturedRequest = req)
+            .Returns(CallHelpers.CreateAsyncUnaryCall(new GetChatCompletionResponse
+            {
+                Outputs =
+                {
+                    new CompletionOutput
+                    {
+                        Message = new CompletionMessage { Content = "I see a PDF." }
+                    }
+                }
+            }));
+
+        var pdfUri = new Uri("https://example.com/data.pdf");
+        var grok = new GrokChatClient(client.Object, "grok-4-1-fast-non-reasoning");
+        var messages = new List<ChatMessage>
+        {
+            new(ChatRole.User, [new TextContent("What do you see?"), new UriContent(pdfUri, "application/pdf")]),
+        };
+
+        await grok.GetResponseAsync(messages);
+
+        Assert.NotNull(capturedRequest);
+        var userMessage = capturedRequest.Messages.FirstOrDefault(m => m.Role == MessageRole.RoleUser);
+        Assert.NotNull(userMessage);
+        Assert.Equal(2, userMessage.Content.Count);
+        Assert.Equal("What do you see?", userMessage.Content[0].Text);
+        var pdfFile = userMessage.Content[1].File;
+        Assert.NotNull(pdfFile);
+
+        Assert.Equal(pdfUri.ToString(), pdfFile.Url);
+        Assert.Equal("application/pdf", pdfFile.MimeType);
     }
 
     [Fact]
