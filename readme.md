@@ -47,6 +47,40 @@ var images = new GrokClient(Environment.GetEnvironmentVariable("XAI_API_KEY")!)
     .AsIImageGenerator("grok-imagine-image");
 ```
 
+## File Attachments
+
+You can attach files to messages using `DataContent` to enable Grok to analyze documents, 
+PDFs, and other file types:
+
+```csharp
+var grok = new GrokClient(Environment.GetEnvironmentVariable("XAI_API_KEY")!)
+    .AsIChatClient("grok-4.1-fast");
+
+var message = new ChatMessage(ChatRole.User,
+    [
+        new DataContent(File.ReadAllBytes("document.pdf"), "application/pdf"),
+        new TextContent("What does this document contain?")
+    ]);
+
+var response = await grok.GetResponseAsync(message);
+Console.WriteLine(response.Text);
+```
+
+You can combine file attachments with text in the same message:
+
+```csharp
+var message = new ChatMessage(ChatRole.User,
+    [
+        new DataContent(File.ReadAllBytes("preferences.pdf"), "application/pdf") { Name = "preferences.pdf" },
+        new DataContent(File.ReadAllBytes("requirements.txt"), "text/plain") { Name = "requirements.txt" },
+        new TextContent("Summarize these documents for me.")
+    ]);
+
+var response = await grok.GetResponseAsync(message);
+```
+
+Supported file types include PDFs, images, text documents, and other formats supported by the Grok API.
+
 ## Web Search
 
 ```csharp
