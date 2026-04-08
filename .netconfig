@@ -220,13 +220,3 @@
 	sha = 97921a5fc1d2685d30fb6e74b283a0a6d81660dc
 	etag = dcadaf10862661d714d4738a8255af4e80344343b45f1fa53260ff4778e3e88b
 	weak
-[file "oss.cs"]
-	url = https://github.com/devlooped/oss/blob/main/oss.cs
-	sha = c8c6644c8f0e6ca938eae48b2dcd49084a7a8c09
-	etag = 10312a2096542c1214389009e24a40c989f869c5f2fd77a8294f12276c82cfb7
-	weak
-[file "readme.tmp.md"]
-	url = https://github.com/devlooped/oss/blob/main/readme.tmp.md
-	sha = 2cc4ada8059b1e2e3f32089e67dab27a8ddeb7fb
-	etag = c7c0694bd13d2d7fdc8b0530c80d5cf032cb9fdaaa5e1f814e951e9e6489746a
-	weak
