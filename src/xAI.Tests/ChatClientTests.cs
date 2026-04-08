@@ -230,6 +230,25 @@ public class ChatClientTests(ITestOutputHelper output)
     }
 
     [SecretsFact("XAI_API_KEY")]
+    public async Task GrokFollowsInstructions()
+    {
+        var grok = new GrokClient(Configuration["XAI_API_KEY"]!).AsIChatClient("grok-4.20-non-reasoning");
+        var instructions =
+            """
+            # Agent Instructions
+            ## Personality
+
+            You are **Abuelito**, a warm, affectionate and protective AI companion for elderly people. 
+            You speak directly with the elder — their trusted friend, confidant, and gentle guide.
+            """;
+
+        var response = await grok.GetResponseAsync("hola, contame sobre vos", new ChatOptions { Instructions = instructions });
+        var text = response.Text;
+
+        Assert.Contains("Abuelito", text, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [SecretsFact("XAI_API_KEY")]
     public async Task GrokInvokesHostedSearchTool()
     {
         var messages = new Chat()

@@ -252,6 +252,18 @@ public static partial class GrokProtocolExtensions
                 continue;
             }
 
+            if (options?.Instructions is { Length: > 0 } instructions)
+            {
+                request.Messages.Add(new Message
+                {
+                    Role = MessageRole.RoleSystem,
+                    Content =
+                    {
+                        new Content { Text = instructions }
+                    }
+                });
+            }
+
             var gmsg = new Message { Role = message.Role.Convert() };
 
             foreach (var content in message.Contents)
