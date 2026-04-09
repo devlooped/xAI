@@ -1,12 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Google.Protobuf.WellKnownTypes;
+﻿using Google.Protobuf.WellKnownTypes;
 using Microsoft.Extensions.AI;
+using Moq;
 using OpenAI.Responses;
 using xAI.Protocol;
 
-namespace xAI;
+namespace xAI.Tests;
 
 public class GrokConversionTests
 {
@@ -277,5 +275,63 @@ public class GrokConversionTests
         Assert.Equal(accessToken, tool.Mcp.Authorization);
         Assert.Contains(KeyValuePair.Create("x-extra", "bar"), tool.Mcp.ExtraHeaders);
         Assert.Contains(KeyValuePair.Create("foo", "baz"), tool.Mcp.ExtraHeaders);
+    }
+
+    static IGrokChatClient CreateClient()
+    {
+        var mock = new Mock<IGrokChatClient>();
+        mock.SetupGet(x => x.DefaultModelId).Returns("grok-4");
+        mock.SetupGet(x => x.EndUserId).Returns((string?)null);
+        return mock.Object;
+    }
+
+    [Fact]
+    public void AsCompletionsRequest_NullToolMode_SetsAutoToolChoice()
+    {
+        var request = CreateClient().AsCompletionsRequest([], new ChatOptions { ToolMode = null });
+
+        Assert.NotNull(request.ToolChoice);
+        Assert.True(request.ToolChoice.HasMode);
+        Assert.Equal(Protocol.ToolMode.Auto, request.ToolChoice.Mode);
+    }
+
+    [Fact]
+    public void AsCompletionsRequest_AutoToolMode_SetsAutoToolChoice()
+    {
+        var request = CreateClient().AsCompletionsRequest([], new ChatOptions { ToolMode = ChatToolMode.Auto });
+
+        Assert.NotNull(request.ToolChoice);
+        Assert.True(request.ToolChoice.HasMode);
+        Assert.Equal(Protocol.ToolMode.Auto, request.ToolChoice.Mode);
+    }
+
+    [Fact]
+    public void AsCompletionsRequest_NoneToolMode_SetsNoneToolChoice()
+    {
+        var request = CreateClient().AsCompletionsRequest([], new ChatOptions { ToolMode = ChatToolMode.None });
+
+        Assert.NotNull(request.ToolChoice);
+        Assert.True(request.ToolChoice.HasMode);
+        Assert.Equal(Protocol.ToolMode.None, request.ToolChoice.Mode);
+    }
+
+    [Fact]
+    public void AsCompletionsRequest_RequireAnyToolMode_SetsRequiredToolChoice()
+    {
+        var request = CreateClient().AsCompletionsRequest([], new ChatOptions { ToolMode = ChatToolMode.RequireAny });
+
+        Assert.NotNull(request.ToolChoice);
+        Assert.True(request.ToolChoice.HasMode);
+        Assert.Equal(Protocol.ToolMode.Required, request.ToolChoice.Mode);
+    }
+
+    [Fact]
+    public void AsCompletionsRequest_RequireSpecificToolMode_SetsFunctionNameToolChoice()
+    {
+        var request = CreateClient().AsCompletionsRequest([], new ChatOptions { ToolMode = ChatToolMode.RequireSpecific("get_weather") });
+
+        Assert.NotNull(request.ToolChoice);
+        Assert.True(request.ToolChoice.HasFunctionName);
+        Assert.Equal("get_weather", request.ToolChoice.FunctionName);
     }
 }

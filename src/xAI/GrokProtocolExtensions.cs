@@ -247,6 +247,15 @@ public static partial class GrokProtocolExtensions
             });
         }
 
+        request.ToolChoice = options?.ToolMode switch
+        {
+            null or AutoChatToolMode => new ToolChoice { Mode = ToolMode.Auto },
+            NoneChatToolMode => new ToolChoice { Mode = ToolMode.None },
+            RequiredChatToolMode { RequiredFunctionName: { } name } => new ToolChoice { FunctionName = name },
+            RequiredChatToolMode => new ToolChoice { Mode = ToolMode.Required },
+            _ => null
+        };
+
         foreach (var message in messages)
         {
             if (message.RawRepresentation is Message input)

@@ -25,6 +25,7 @@
   <ItemGroup>
     <None Include="..\..\osmfeula.txt" Link="osmfeula.txt" PackagePath="OSMFEULA.txt" />
     <InternalsVisibleTo Include="xAI.Tests" />
+    <InternalsVisibleTo Include="DynamicProxyGenAssembly2"/>
   </ItemGroup>
 
   <ItemGroup>
