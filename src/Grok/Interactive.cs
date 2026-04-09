@@ -161,7 +161,7 @@ partial class Interactive(IConfiguration configuration) : IHostedService
                                         {
                                             var link = url.GetString() ?? "";
                                             grid.AddRow(new Markup(":globe_with_meridians:"), new Text(tool.Function.Name),
-                                                new Text(link, new Style(Color.Blue, link: link)));
+                                                new Spectre.Console.Markup($"[blue][link={link}]{Spectre.Console.Markup.Escape(link)}[/][/]"));
                                         }
                                     }
                                     else
