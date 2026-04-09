@@ -893,6 +893,101 @@ public class ChatClientTests(ITestOutputHelper output)
         Assert.Equal("kzu", capturedRequest.User);
     }
 
+    [Fact]
+    public async Task GrokPassesToolsFromChatOptionsToGrpcRequest()
+    {
+        GetCompletionsRequest? capturedRequest = null;
+        var client = new Mock<xAI.Protocol.Chat.ChatClient>(MockBehavior.Strict);
+        client.Setup(x => x.GetCompletionAsync(It.IsAny<GetCompletionsRequest>(), null, null, CancellationToken.None))
+            .Callback<GetCompletionsRequest, Metadata?, DateTime?, CancellationToken>((req, _, _, _) => capturedRequest = req)
+            .Returns(CallHelpers.CreateAsyncUnaryCall(new GetChatCompletionResponse
+            {
+                Outputs =
+                {
+                    new CompletionOutput
+                    {
+                        Message = new CompletionMessage { Content = "Done" }
+                    }
+                }
+            }));
+
+        var grok = new GrokChatClient(client.Object, "grok-4-1-fast-non-reasoning");
+        var options = new ChatOptions
+        {
+            Tools =
+            [
+                AIFunctionFactory.Create(
+                    (string city, string unit) => $"72°{unit} in {city}",
+                    "get_weather",
+                    "Gets the current weather for a city"),
+            ]
+        };
+
+        await grok.GetResponseAsync([new ChatMessage(ChatRole.User, "What's the weather in Seattle?")], options);
+
+        Assert.NotNull(capturedRequest);
+        var tool = Assert.Single(capturedRequest.Tools);
+        Assert.NotNull(tool.Function);
+
+        Assert.Equal("get_weather", tool.Function.Name);
+        Assert.Equal("Gets the current weather for a city", tool.Function.Description);
+
+        // Parameters must be a non-empty JSON schema reflecting the function signature
+        Assert.NotEmpty(tool.Function.Parameters);
+        var schema = JsonDocument.Parse(tool.Function.Parameters);
+        var properties = schema.RootElement.GetProperty("properties");
+        Assert.True(properties.TryGetProperty("city", out _), "Schema should contain 'city' parameter");
+        Assert.True(properties.TryGetProperty("unit", out _), "Schema should contain 'unit' parameter");
+    }
+
+    [Fact]
+    public async Task GrokPassesMultipleToolsFromChatOptionsToGrpcRequest()
+    {
+        GetCompletionsRequest? capturedRequest = null;
+        var client = new Mock<xAI.Protocol.Chat.ChatClient>(MockBehavior.Strict);
+        client.Setup(x => x.GetCompletionAsync(It.IsAny<GetCompletionsRequest>(), null, null, CancellationToken.None))
+            .Callback<GetCompletionsRequest, Metadata?, DateTime?, CancellationToken>((req, _, _, _) => capturedRequest = req)
+            .Returns(CallHelpers.CreateAsyncUnaryCall(new GetChatCompletionResponse
+            {
+                Outputs =
+                {
+                    new CompletionOutput
+                    {
+                        Message = new CompletionMessage { Content = "Done" }
+                    }
+                }
+            }));
+
+        var grok = new GrokChatClient(client.Object, "grok-4-1-fast-non-reasoning");
+        var options = new ChatOptions
+        {
+            Tools =
+            [
+                AIFunctionFactory.Create(() => DateTimeOffset.UtcNow.ToString("O"), "get_date", "Gets today's date"),
+                AIFunctionFactory.Create((string city) => $"72°F in {city}", "get_weather", "Gets the weather"),
+                new HostedWebSearchTool(),
+            ]
+        };
+
+        await grok.GetResponseAsync([new ChatMessage(ChatRole.User, "Hello")], options);
+
+        Assert.NotNull(capturedRequest);
+        Assert.Equal(3, capturedRequest.Tools.Count);
+
+        var getDate = capturedRequest.Tools.FirstOrDefault(t => t.Function?.Name == "get_date");
+        Assert.NotNull(getDate?.Function);
+        Assert.Equal("Gets today's date", getDate.Function.Description);
+
+        var getWeather = capturedRequest.Tools.FirstOrDefault(t => t.Function?.Name == "get_weather");
+        Assert.NotNull(getWeather?.Function);
+        Assert.Equal("Gets the weather", getWeather.Function.Description);
+        var schema = JsonDocument.Parse(getWeather.Function.Parameters);
+        Assert.True(schema.RootElement.GetProperty("properties").TryGetProperty("city", out _));
+
+        var webSearch = capturedRequest.Tools.FirstOrDefault(t => t.WebSearch != null);
+        Assert.NotNull(webSearch?.WebSearch);
+    }
+
     class TestGrpcChannel(CallInvoker invoker) : ChannelBase("test")
     {
         public override CallInvoker CreateCallInvoker() => invoker;
