@@ -105,13 +105,13 @@
 	weak
 [file "src/Directory.Build.props"]
 	url = https://github.com/devlooped/oss/blob/main/src/Directory.Build.props
-	sha = 0ff8b7b79a82112678326d1dc5543ed890311366
-	etag = 3ebde0a8630d526b80f15801179116e17a857ff880a4442e7db7b075efa4fd63
+	sha = 4b84c540df6f37c30fb38df7947d79871c34f036
+	etag = bca64456d4e2cd05375a72b6de376b2c51edf6ad49029aa9a729f4a349a54656
 	weak
 [file "src/Directory.Build.targets"]
 	url = https://github.com/devlooped/oss/blob/main/src/Directory.Build.targets
-	sha = 4339749ef4b8f66def75931df09ef99c149f8421
-	etag = 8b4492765755c030c4c351e058a92f53ab493cab440c1c0ef431f6635c4dae0e
+	sha = 4b84c540df6f37c30fb38df7947d79871c34f036
+	etag = 09ce6b3f9521f8eedc44b77e7b7eaf90bf5df36e1ffb7f78ca27658812180977
 	weak
 [file "src/nuget.config"]
 	url = https://github.com/devlooped/oss/blob/main/src/nuget.config
@@ -219,4 +219,14 @@
 	url = https://github.com/protocolbuffers/protobuf/blob/main/src/google/protobuf/any.proto
 	sha = 97921a5fc1d2685d30fb6e74b283a0a6d81660dc
 	etag = dcadaf10862661d714d4738a8255af4e80344343b45f1fa53260ff4778e3e88b
+	weak
+[file "oss.cs"]
+	url = https://github.com/devlooped/oss/blob/main/oss.cs
+	sha = c8c6644c8f0e6ca938eae48b2dcd49084a7a8c09
+	etag = 10312a2096542c1214389009e24a40c989f869c5f2fd77a8294f12276c82cfb7
+	weak
+[file "readme.tmp.md"]
+	url = https://github.com/devlooped/oss/blob/main/readme.tmp.md
+	sha = 2cc4ada8059b1e2e3f32089e67dab27a8ddeb7fb
+	etag = c7c0694bd13d2d7fdc8b0530c80d5cf032cb9fdaaa5e1f814e951e9e6489746a
 	weak
