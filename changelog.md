@@ -1,5 +1,17 @@
 # Changelog
 
+## [v2.0.6](https://github.com/devlooped/xAI/tree/v2.0.6) (2026-04-09)
+
+[Full Changelog](https://github.com/devlooped/xAI/compare/v2.0.5...v2.0.6)
+
+:sparkles: Implemented enhancements:
+
+- Add tests and logic for ToolChoice mapping in Grok [\#117](https://github.com/devlooped/xAI/pull/117) (@kzu)
+
+:twisted_rightwards_arrows: Merged:
+
+- Add tool instruction following comparison tests across models [\#118](https://github.com/devlooped/xAI/pull/118) (@kzu)
+
 ## [v2.0.5](https://github.com/devlooped/xAI/tree/v2.0.5) (2026-04-08)
 
 [Full Changelog](https://github.com/devlooped/xAI/compare/v2.0.4...v2.0.5)
