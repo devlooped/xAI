@@ -75,8 +75,8 @@
 	weak
 [file ".github/workflows/triage.yml"]
 	url = https://github.com/devlooped/oss/blob/main/.github/workflows/triage.yml
-	sha = 33000c0c4ab4eb4e0e142fa54515b811a189d55c
-	etag = 013a47739e348f06891f37c45164478cca149854e6cd5c5158e6f073f852b61a
+	sha = 61a602fc61eedbdae235f01e93657a6219ac2427
+	etag = 152cd3a559c08da14d1da12a5262ba1d2e0ed6bed6d2eabf5bd209b0c35d8a75
 	weak
 [file ".gitignore"]
 	url = https://github.com/devlooped/oss/blob/main/.gitignore
@@ -105,13 +105,13 @@
 	weak
 [file "src/Directory.Build.props"]
 	url = https://github.com/devlooped/oss/blob/main/src/Directory.Build.props
-	sha = 4b84c540df6f37c30fb38df7947d79871c34f036
-	etag = bca64456d4e2cd05375a72b6de376b2c51edf6ad49029aa9a729f4a349a54656
+	sha = dd13ed3334135c30dcb1e3b2295dc7622de298d9
+	etag = bd05f9f240823c0ac79ddfefe654061550c36f82dd94fa513b82900e92686a5f
 	weak
 [file "src/Directory.Build.targets"]
 	url = https://github.com/devlooped/oss/blob/main/src/Directory.Build.targets
-	sha = 4b84c540df6f37c30fb38df7947d79871c34f036
-	etag = 09ce6b3f9521f8eedc44b77e7b7eaf90bf5df36e1ffb7f78ca27658812180977
+	sha = 083a37bd9307ec820bac6ee3c7384083151d36d8
+	etag = 907682e5632a2ba430357e6e042a4ca33cb8c94a3a215d3091aa03f5958a4877
 	weak
 [file "src/nuget.config"]
 	url = https://github.com/devlooped/oss/blob/main/src/nuget.config
@@ -226,3 +226,8 @@
 [file "oss.cs"]
 	url = https://github.com/devlooped/oss/blob/main/oss.cs
 	skip
+[file ".github/copilot-instructions.md"]
+	url = https://github.com/devlooped/oss/blob/main/.github/copilot-instructions.md
+	sha = e616d89d9537c4b8ccf1c20dd277ab82104167c4
+	etag = 6ee650d118a57494d3545d54718ccaa5257b09d54504e9c21514fe596edd9678
+	weak
