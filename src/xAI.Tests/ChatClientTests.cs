@@ -21,7 +21,9 @@ public class ChatClientTests(ITestOutputHelper output)
             { "user", "What day is today?" },
         };
 
-        var chat = new OpenAIClient(Configuration["OPENAI_API_KEY"]!).GetChatClient("gpt-5.4").AsIChatClient()
+        var chat = new OpenAIClient(Configuration["OPENAI_API_KEY"]!)
+            .GetChatClient("gpt-5.4")
+            .AsIChatClient()
             .AsBuilder()
             .UseFunctionInvocation(configure: client => client.MaximumIterationsPerRequest = 3)
             .UseLogging(output.AsLoggerFactory())
@@ -96,10 +98,10 @@ public class ChatClientTests(ITestOutputHelper output)
     [SecretsFact("XAI_API_KEY")]
     public async Task GrokReasoningModelOutputsBothContentAndEncryptedReasoning()
     {
-        var grok = new GrokClient(Configuration["XAI_API_KEY"]!).AsIChatClient("grok-4-1-fast");
+        var grok = new GrokClient(Configuration["XAI_API_KEY"]!).AsIChatClient("grok-4-1-fast-reasoning");
 
         var response = await grok.GetResponseAsync(
-            "What is 3 + 4? Respond with just the number.",
+            "What is 3 + 4? Respond with just the number, think about it really well.",
             new GrokChatOptions
             {
                 UseEncryptedContent = true

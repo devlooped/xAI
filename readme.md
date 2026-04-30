@@ -45,6 +45,12 @@ var chat = new GrokClient(Environment.GetEnvironmentVariable("XAI_API_KEY")!)
 
 var images = new GrokClient(Environment.GetEnvironmentVariable("XAI_API_KEY")!)
     .AsIImageGenerator("grok-imagine-image");
+
+var speech = new GrokClient(Environment.GetEnvironmentVariable("XAI_API_KEY")!)
+    .AsITextToSpeechClient();
+
+var audio = await speech.GetAudioAsync("Hello! Welcome to xAI text to speech.",
+    new TextToSpeechOptions { VoiceId = "eve", Language = "en" });
 ```
 
 ## File Attachments
@@ -391,6 +397,72 @@ var result = await imageGenerator.GenerateAsync(
 
 var editedImage = (UriContent)result.Contents.First();
 Console.WriteLine($"Edited image URL: {editedImage.Uri}");
+```
+
+## Text to Speech
+
+Grok supports text to speech via the `ITextToSpeechClient` abstraction from Microsoft.Extensions.AI.
+Use `AsITextToSpeechClient` to get a TTS client:
+
+```csharp
+var speech = new GrokClient(Environment.GetEnvironmentVariable("XAI_API_KEY")!)
+    .AsITextToSpeechClient();
+```
+
+### Unary (single response)
+
+Call `GetAudioAsync` to synthesize speech in a single request. The result contains a `DataContent` 
+with the audio bytes and media type:
+
+```csharp
+var response = await speech.GetAudioAsync("Hello! Welcome to xAI text to speech.",
+    new TextToSpeechOptions { VoiceId = "eve", Language = "en" });
+
+var audio = (DataContent)response.Contents.First();
+// audio.MediaType == "audio/mpeg" (MP3 by default)
+await File.WriteAllBytesAsync("output.mp3", audio.Data.ToArray());
+```
+
+Available voices include `ara`, `eve`, `leo`, `rex`, and `sal`. Defaults to `eve` and English when 
+`VoiceId`/`Language` are not specified.
+
+### Streaming
+
+Call `GetStreamingAudioAsync` to receive audio chunks as they are generated, enabling low-latency 
+playback or progressive file writes:
+
+```csharp
+await using var fileStream = File.Create("output.mp3");
+
+await foreach (var update in speech.GetStreamingAudioAsync("Hello from streaming TTS!",
+    new TextToSpeechOptions { VoiceId = "eve", AudioFormat = "mp3" }))
+{
+    if (update.Kind == TextToSpeechResponseUpdateKind.AudioUpdating)
+    {
+        foreach (var content in update.Contents.OfType<DataContent>())
+            await fileStream.WriteAsync(content.Data);
+    }
+}
+```
+
+### Grok-Specific Options
+
+Use `GrokTextToSpeechOptions` to control audio quality and streaming behavior beyond the base 
+`TextToSpeechOptions`:
+
+```csharp
+var options = new GrokTextToSpeechOptions
+{
+    VoiceId = "rex",
+    Language = "en",
+    AudioFormat = "mp3",      // mp3 | wav | pcm | mulaw | alaw
+    SampleRate = 24000,       // Hz
+    BitRate = 128000,         // bits per second (MP3 only)
+    OptimizeStreamingLatency = 1,   // 0–4; higher trades quality for lower latency
+    TextNormalization = true, // expand abbreviations and numbers before synthesis
+};
+
+var response = await speech.GetAudioAsync("Streaming at 24 kHz, 128 kbps.", options);
 ```
 
 <!-- #xai -->
