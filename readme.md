@@ -51,6 +51,12 @@ var speech = new GrokClient(Environment.GetEnvironmentVariable("XAI_API_KEY")!)
 
 var audio = await speech.GetAudioAsync("Hello! Welcome to xAI text to speech.",
     new TextToSpeechOptions { VoiceId = "eve", Language = "en" });
+
+var transcription = new GrokClient(Environment.GetEnvironmentVariable("XAI_API_KEY")!)
+    .AsISpeechToTextClient();
+
+var text = await transcription.GetTextAsync(File.OpenRead("audio.mp3"),
+    new SpeechToTextOptions { TextLanguage = "en" });
 ```
 
 ## File Attachments
@@ -402,6 +408,8 @@ Console.WriteLine($"Edited image URL: {editedImage.Uri}");
 ## Text to Speech
 
 Grok supports text to speech via the `ITextToSpeechClient` abstraction from Microsoft.Extensions.AI.
+See the [xAI text to speech docs](https://docs.x.ai/developers/model-capabilities/audio/text-to-speech)
+for supported voices, formats, and streaming details.
 Use `AsITextToSpeechClient` to get a TTS client:
 
 ```csharp
@@ -463,6 +471,87 @@ var options = new GrokTextToSpeechOptions
 };
 
 var response = await speech.GetAudioAsync("Streaming at 24 kHz, 128 kbps.", options);
+```
+
+## Speech to Text
+
+Grok supports speech to text via the `ISpeechToTextClient` abstraction from Microsoft.Extensions.AI.
+See the [xAI speech to text docs](https://docs.x.ai/developers/model-capabilities/audio/speech-to-text)
+for supported languages, audio formats, diarization, multichannel audio, and streaming details.
+Use `AsISpeechToTextClient` to get an STT client:
+
+```csharp
+var transcription = new GrokClient(Environment.GetEnvironmentVariable("XAI_API_KEY")!)
+    .AsISpeechToTextClient();
+```
+
+### Unary (single response)
+
+Call `GetTextAsync` to transcribe an audio file in a single request. The result contains transcript 
+text, timing information, and the raw xAI response:
+
+```csharp
+await using var audio = File.OpenRead("meeting.mp3");
+
+var response = await transcription.GetTextAsync(audio,
+    new GrokSpeechToTextOptions
+    {
+        TextLanguage = "en",
+        Format = true,
+    });
+
+Console.WriteLine(response.Text);
+```
+
+Set `Format = true` with `TextLanguage` to enable xAI's inverse text normalization, such as converting 
+spoken numbers and currencies into written form.
+
+### Streaming
+
+Call `GetStreamingTextAsync` to stream raw audio and receive transcript updates as speech is processed. 
+The xAI streaming endpoint expects raw encoded audio such as PCM, µ-law, or A-law rather than MP3/WAV 
+container bytes:
+
+```csharp
+await using var audio = File.OpenRead("audio.pcm");
+
+await foreach (var update in transcription.GetStreamingTextAsync(audio,
+    new GrokSpeechToTextOptions
+    {
+        AudioFormat = "pcm",
+        SpeechSampleRate = 16000,
+        TextLanguage = "en",
+        InterimResults = true,
+    }))
+{
+    if (update.Kind is SpeechToTextResponseUpdateKind.TextUpdating or
+        SpeechToTextResponseUpdateKind.TextUpdated)
+    {
+        Console.WriteLine(update.Text);
+    }
+}
+```
+
+### Grok-Specific Options
+
+Use `GrokSpeechToTextOptions` to control xAI transcription behavior beyond the base 
+`SpeechToTextOptions`:
+
+```csharp
+var options = new GrokSpeechToTextOptions
+{
+    TextLanguage = "en",
+    SpeechSampleRate = 16000,
+    Format = true,          // normalize spoken numbers, currencies, and units
+    AudioFormat = "pcm",    // pcm | mulaw | alaw for raw audio
+    Diarize = true,         // include speaker IDs on words when available
+    Multichannel = true,    // transcribe each channel independently
+    Channels = 2,
+    InterimResults = true,  // streaming only
+    Endpointing = 10,       // streaming silence duration in milliseconds
+};
+
+var response = await transcription.GetTextAsync(File.OpenRead("call.pcm"), options);
 ```
 
 <!-- #xai -->

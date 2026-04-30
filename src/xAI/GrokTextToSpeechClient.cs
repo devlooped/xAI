@@ -72,7 +72,6 @@ partial class GrokTextToSpeechClient : ITextToSpeechClient
 
         return new TextToSpeechResponse([new DataContent(audio, mediaType)])
         {
-            ModelId = options?.ModelId,
             RawRepresentation = raw,
         };
     }
@@ -104,7 +103,6 @@ partial class GrokTextToSpeechClient : ITextToSpeechClient
                     {
                         Kind = TextToSpeechResponseUpdateKind.AudioUpdating,
                         Contents = [new DataContent(audio, GetMediaType(request.OutputFormat?.Codec))],
-                        ModelId = options?.ModelId,
                         RawRepresentation = rawRepresentation,
                     };
                     break;
@@ -113,7 +111,6 @@ partial class GrokTextToSpeechClient : ITextToSpeechClient
                     var update = new TextToSpeechResponseUpdate
                     {
                         Kind = TextToSpeechResponseUpdateKind.SessionClose,
-                        ModelId = options?.ModelId,
                         RawRepresentation = rawRepresentation,
                     };
 

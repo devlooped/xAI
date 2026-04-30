@@ -1,13 +1,8 @@
 ﻿using System.Text.Json;
-using Devlooped.Extensions.AI;
-using DotNetEnv;
-using Grpc.Core;
-using Grpc.Net.Client.Configuration;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using xAI.Protocol;
-using Xunit.Abstractions;
-using Xunit.Sdk;
+using static ConfigurationExtensions;
 using ChatConversation = Devlooped.Extensions.AI.Chat;
 
 namespace xAI.Tests;
@@ -18,7 +13,7 @@ public class SanityChecks(ITestOutputHelper output)
     public async Task NoEmbeddingModels()
     {
         var services = new ServiceCollection()
-            .AddxAIProtocol(Environment.GetEnvironmentVariable("CI_XAI_API_KEY")!)
+            .AddxAIProtocol(Configuration["CI_XAI_API_KEY"]!)
             .BuildServiceProvider();
 
         var client = services.GetRequiredService<Models.ModelsClient>();
@@ -33,7 +28,7 @@ public class SanityChecks(ITestOutputHelper output)
     public async Task ListModelsAsync()
     {
         var services = new ServiceCollection()
-            .AddxAIProtocol(Environment.GetEnvironmentVariable("CI_XAI_API_KEY")!)
+            .AddxAIProtocol(Configuration["CI_XAI_API_KEY"]!)
             .BuildServiceProvider();
 
         var client = services.GetRequiredService<Models.ModelsClient>();
@@ -50,7 +45,7 @@ public class SanityChecks(ITestOutputHelper output)
     public async Task ExecuteLocalFunctionWithWebSearch()
     {
         var services = new ServiceCollection()
-            .AddxAIProtocol(Environment.GetEnvironmentVariable("CI_XAI_API_KEY")!)
+            .AddxAIProtocol(Configuration["CI_XAI_API_KEY"]!)
             .BuildServiceProvider();
 
         var client = services.GetRequiredService<xAI.Protocol.Chat.ChatClient>();
@@ -161,7 +156,7 @@ public class SanityChecks(ITestOutputHelper output)
     public async Task ClientSideFunction(bool streaming)
     {
         var getDateCalls = 0;
-        var grok = new GrokClient(Env.GetString("CI_XAI_API_KEY")!)
+        var grok = new GrokClient(Configuration["CI_XAI_API_KEY"]!)
             .AsIChatClient("grok-4-1-fast")
             .AsBuilder()
             .UseFunctionInvocation()
@@ -203,7 +198,7 @@ public class SanityChecks(ITestOutputHelper output)
     [InlineData(true)]
     public async Task AgenticWebSearch(bool streaming)
     {
-        var grok = new GrokClient(Env.GetString("CI_XAI_API_KEY")!)
+        var grok = new GrokClient(Configuration["CI_XAI_API_KEY"]!)
             .AsIChatClient("grok-4-1-fast");
 
         var options = new GrokChatOptions
@@ -249,7 +244,7 @@ public class SanityChecks(ITestOutputHelper output)
     [InlineData(true)]
     public async Task AgenticXSearch(bool streaming)
     {
-        var grok = new GrokClient(Env.GetString("CI_XAI_API_KEY")!)
+        var grok = new GrokClient(Configuration["CI_XAI_API_KEY"]!)
             .AsIChatClient("grok-4-1-fast");
 
         var options = new GrokChatOptions
@@ -288,7 +283,7 @@ public class SanityChecks(ITestOutputHelper output)
     [InlineData(true)]
     public async Task AgenticMcpServer(bool streaming)
     {
-        var grok = new GrokClient(Env.GetString("CI_XAI_API_KEY")!)
+        var grok = new GrokClient(Configuration["CI_XAI_API_KEY"]!)
             .AsIChatClient("grok-4-1-fast");
 
         var options = new GrokChatOptions
@@ -299,7 +294,7 @@ public class SanityChecks(ITestOutputHelper output)
             [
                 new HostedMcpServerTool("GitHub", "https://api.githubcopilot.com/mcp/")
                 {
-                    Headers = new Dictionary < string, string > {["Authorization"] = Env.GetString("GITHUB_TOKEN") ! },
+                    Headers = new Dictionary < string, string > {["Authorization"] = Configuration["GITHUB_TOKEN"] ! },
                     AllowedTools = ["list_releases", "get_release_by_tag"],
                 }
             ]
@@ -340,7 +335,7 @@ public class SanityChecks(ITestOutputHelper output)
     [InlineData(true)]
     public async Task AgenticFileSearch(bool streaming)
     {
-        var grok = new GrokClient(Env.GetString("CI_XAI_API_KEY")!)
+        var grok = new GrokClient(Configuration["CI_XAI_API_KEY"]!)
             .AsIChatClient("grok-4-1-fast");
 
         var options = new GrokChatOptions
@@ -406,7 +401,7 @@ public class SanityChecks(ITestOutputHelper output)
     [InlineData(true)]
     public async Task AgenticCodeInterpreter(bool streaming)
     {
-        var client = new GrokClient(Env.GetString("CI_XAI_API_KEY")!);
+        var client = new GrokClient(Configuration["CI_XAI_API_KEY"]!);
 
         var grok = client.AsIChatClient("grok-4-1-fast");
 
@@ -449,6 +444,72 @@ public class SanityChecks(ITestOutputHelper output)
         Assert.True(result > 1000 && result < 1200,
             $"Compound interest {result} should be between 1000 and 1200");
         output.WriteLine($"Code interpreter calls: {codeInterpreterCalls.Count}");
+    }
+
+    [SecretsTheory("CI_XAI_API_KEY")]
+    [InlineData("rex")]
+    public async Task TextToSpeech_SpeechToText(string voiceId)
+    {
+        using var client = new GrokClient(Configuration["CI_XAI_API_KEY"]!);
+        using var tts = client.AsITextToSpeechClient();
+
+        var expected = "El que cree en mí, en realidad no cree en mí, sino en aquel que me envió.";
+        var tempFile = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"xai-tts-{Guid.NewGuid():N}.pcm");
+
+        try
+        {
+            await using (var fileStream = System.IO.File.Create(tempFile))
+            {
+                await foreach (var update in tts.GetStreamingAudioAsync(
+                    expected,
+                    new TextToSpeechOptions
+                    {
+                        VoiceId = voiceId,
+                        Language = "es-ES",
+                        // uses mp3 by default
+                    }))
+                {
+                    if (update.Kind == TextToSpeechResponseUpdateKind.AudioUpdating)
+                    {
+                        foreach (var content in update.Contents)
+                        {
+                            if (content is DataContent data)
+                            {
+                                await fileStream.WriteAsync(data.Data);
+                            }
+                        }
+                    }
+                }
+            }
+
+            Assert.True(System.IO.File.Exists(tempFile));
+            Assert.True(new System.IO.FileInfo(tempFile).Length > 0);
+
+            using var stt = client.AsISpeechToTextClient();
+            await using var audioStream = System.IO.File.OpenRead(tempFile);
+
+            // auto-detect format from content
+            var transcription = await stt.GetTextAsync(audioStream);
+
+            Assert.Equal(
+                NormalizeTranscription(expected),
+                NormalizeTranscription(transcription.Text),
+                ignoreCase: true);
+        }
+        finally
+        {
+            if (System.IO.File.Exists(tempFile))
+                System.IO.File.Delete(tempFile);
+        }
+    }
+
+    static string NormalizeTranscription(string? text)
+    {
+        var withoutPunctuation = new string((text ?? string.Empty)
+            .Select(character => char.IsPunctuation(character) ? ' ' : character)
+            .ToArray());
+
+        return string.Join(" ", withoutPunctuation.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
     }
 
     static async Task<ChatResponse> GetResponseAsync(IChatClient client, ChatConversation chat, GrokChatOptions options, bool streaming)

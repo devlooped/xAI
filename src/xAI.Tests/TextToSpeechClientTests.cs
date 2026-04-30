@@ -77,7 +77,7 @@ public class TextToSpeechClientTests
         var data = Assert.IsType<DataContent>(content);
         Assert.Equal("audio/wav", data.MediaType);
         Assert.Equal(audio, data.Data.ToArray());
-        Assert.Equal("test-model", response.ModelId);
+        Assert.Null(response.ModelId);
     }
 
     [Theory]
@@ -181,6 +181,7 @@ public class TextToSpeechClientTests
                 SampleRate = 8000,
                 OptimizeStreamingLatency = 1,
                 TextNormalization = true,
+                ModelId = "ignored-model",
             }))
         {
             updates.Add(update);
@@ -206,6 +207,7 @@ public class TextToSpeechClientTests
             update =>
             {
                 Assert.Equal(TextToSpeechResponseUpdateKind.AudioUpdating, update.Kind);
+                Assert.Null(update.ModelId);
                 var data = Assert.IsType<DataContent>(Assert.Single(update.Contents));
                 Assert.Equal(new byte[] { 1, 2, 3 }, data.Data.ToArray());
                 Assert.Equal("audio/basic", data.MediaType);
@@ -213,6 +215,7 @@ public class TextToSpeechClientTests
             update =>
             {
                 Assert.Equal(TextToSpeechResponseUpdateKind.SessionClose, update.Kind);
+                Assert.Null(update.ModelId);
                 Assert.Equal("trace-123", update.AdditionalProperties?["trace_id"]);
             });
     }
@@ -235,58 +238,6 @@ public class TextToSpeechClientTests
         });
 
         Assert.Contains("voice rejected", exception.Message);
-    }
-
-    [SecretsTheory("XAI_API_KEY")]
-    //[InlineData("ara")]
-    //[InlineData("eve")]
-    [InlineData("rex")] // 👈 el mejor para Jesus
-    //[InlineData("sal")]
-    //[InlineData("leo")]
-    public async Task GetStreamingAudioAsync_IntegrationTest_SavesAndPlaysAudio(string voiceId)
-    {
-        var apiKey = Environment.GetEnvironmentVariable("XAI_API_KEY");
-        using var client = new GrokClient(apiKey!);
-        using var tts = client.AsITextToSpeechClient();
-
-        var tempFile = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"xai-tts-{Guid.NewGuid():N}.mp3");
-
-        await using (var fileStream = System.IO.File.Create(tempFile))
-        {
-            await foreach (var update in tts.GetStreamingAudioAsync(
-                """
-                El que cree en mí, en realidad no cree en mí, sino en aquel que me envió. 
-                Y el que me ve, ve al que me envió. 
-                Yo soy la luz, y he venido al mundo para que todo el que crea en mí no permanezca en las tinieblas.
-                """,
-                new GrokTextToSpeechOptions
-                {
-                    VoiceId = voiceId,
-                    AudioFormat = "mp3",
-
-                }))
-            {
-                if (update.Kind == TextToSpeechResponseUpdateKind.AudioUpdating)
-                {
-                    foreach (var content in update.Contents)
-                    {
-                        if (content is DataContent data)
-                        {
-                            await fileStream.WriteAsync(data.Data);
-                        }
-                    }
-                }
-            }
-        }
-
-        Assert.True(System.IO.File.Exists(tempFile));
-        Assert.True(new System.IO.FileInfo(tempFile).Length > 0);
-
-        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
-        {
-            FileName = tempFile,
-            UseShellExecute = true
-        });
     }
 
     static GrokClientOptions CreateOptions(HttpMessageHandler handler) => new()
