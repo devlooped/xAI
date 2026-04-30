@@ -1,5 +1,19 @@
 # Changelog
 
+## [v2.1.0](https://github.com/devlooped/xAI/tree/v2.1.0) (2026-04-30)
+
+[Full Changelog](https://github.com/devlooped/xAI/compare/v2.0.6...v2.1.0)
+
+:sparkles: Implemented enhancements:
+
+- Add Speech to Text support via ISpeechToTextClient implementation [\#134](https://github.com/devlooped/xAI/pull/134) (@kzu)
+- Add Text to Speech support via ITextToSpeechClient [\#130](https://github.com/devlooped/xAI/pull/130) (@kzu)
+- Add Files gRPC service proto and sync usage.proto [\#127](https://github.com/devlooped/xAI/pull/127) (@kzu)
+
+:bug: Fixed bugs:
+
+- Ensure follow-up messages have content [\#129](https://github.com/devlooped/xAI/pull/129) (@kzu)
+
 ## [v2.0.6](https://github.com/devlooped/xAI/tree/v2.0.6) (2026-04-09)
 
 [Full Changelog](https://github.com/devlooped/xAI/compare/v2.0.5...v2.0.6)
