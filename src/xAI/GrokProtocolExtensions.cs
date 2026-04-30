@@ -247,20 +247,11 @@ public static partial class GrokProtocolExtensions
             });
         }
 
-        request.ToolChoice = options?.ToolMode switch
-        {
-            null or AutoChatToolMode => new ToolChoice { Mode = ToolMode.Auto },
-            NoneChatToolMode => new ToolChoice { Mode = ToolMode.None },
-            RequiredChatToolMode { RequiredFunctionName: { } name } => new ToolChoice { FunctionName = name },
-            RequiredChatToolMode => new ToolChoice { Mode = ToolMode.Required },
-            _ => null
-        };
-
         foreach (var message in messages)
         {
             if (message.RawRepresentation is Message input)
             {
-                request.Messages.Add(input);
+                request.Messages.Add(EnsureContentElement(input.Clone()));
                 continue;
             }
             else if (message.RawRepresentation is CompletionMessage completion)
@@ -388,7 +379,7 @@ public static partial class GrokProtocolExtensions
             if (gmsg.Content.Count == 0 && gmsg.ToolCalls.Count == 0)
                 continue;
 
-            request.Messages.Add(gmsg);
+            request.Messages.Add(EnsureContentElement(gmsg));
         }
 
         if (options is GrokChatOptions grokOptions)
@@ -410,7 +401,20 @@ public static partial class GrokProtocolExtensions
         if (options?.Tools is not null)
         {
             foreach (var tool in options.Tools.Select(x => x.AsProtocolTool(options)))
-                if (tool is not null) request.Tools.Add(tool);
+                if (tool is not null)
+                    request.Tools.Add(tool);
+
+            if (request.Tools.Count > 0)
+            {
+                request.ToolChoice = options?.ToolMode switch
+                {
+                    null or AutoChatToolMode => new ToolChoice { Mode = ToolMode.Auto },
+                    NoneChatToolMode => new ToolChoice { Mode = ToolMode.None },
+                    RequiredChatToolMode { RequiredFunctionName: { } name } => new ToolChoice { FunctionName = name },
+                    RequiredChatToolMode => new ToolChoice { Mode = ToolMode.Required },
+                    _ => null
+                };
+            }
         }
 
         if (options?.ResponseFormat is ChatResponseFormatJson jsonFormat)
@@ -576,6 +580,21 @@ public static partial class GrokProtocolExtensions
             message.Content.Add(new Content { Text = completion.Content });
 
         message.ToolCalls.AddRange(completion.ToolCalls);
+
+        return EnsureContentElement(message);
+    }
+
+    static Message EnsureContentElement(Message message)
+    {
+        if (message.Content.Count == 0 &&
+            (message.ToolCalls.Count > 0 ||
+             !string.IsNullOrEmpty(message.ReasoningContent) ||
+             !string.IsNullOrEmpty(message.EncryptedContent)))
+        {
+            // Grok rejects follow-up messages that have tool calls or reasoning metadata
+            // but no content items at all. Use a single space to keep the block non-empty.
+            message.Content.Add(new Content { Text = " " });
+        }
 
         return message;
     }
