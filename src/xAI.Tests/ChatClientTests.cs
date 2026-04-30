@@ -8,6 +8,7 @@ using Tests.Client.Helpers;
 using xAI.Protocol;
 using static ConfigurationExtensions;
 using Chat = Devlooped.Extensions.AI.Chat;
+using File = System.IO.File;
 
 namespace xAI.Tests;
 
