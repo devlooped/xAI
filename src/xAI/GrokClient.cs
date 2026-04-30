@@ -15,13 +15,14 @@ namespace xAI;
 /// <param name="options">The options used to configure the client.</param>
 public sealed class GrokClient(string apiKey, GrokClientOptions options) : IDisposable
 {
-    static readonly ConcurrentDictionary<(Uri, string), ChannelBase> channels = [];
+    static readonly ConcurrentDictionary<(Uri, string), (ChannelBase, HttpMessageHandler)> channels = [];
 
     /// <summary>Initializes a new instance of the <see cref="GrokClient"/> class with default options.</summary>
     public GrokClient(string apiKey) : this(apiKey, new GrokClientOptions()) { }
 
-    internal GrokClient(ChannelBase channel, GrokClientOptions options) : this("", options)
-        => channels[(options.Endpoint, "")] = channel;
+    /// <summary>Testing ctor.</summary>
+    internal GrokClient(ChannelBase channel, GrokClientOptions options, string? apiKey = default) : this(apiKey ?? "", options)
+        => channels[(options.Endpoint, apiKey ?? "")] = (channel, GetHttpHandler(options.ChannelOptions, apiKey ?? ""));
 
     /// <summary>Gets the API key used for authentication.</summary>
     public string ApiKey { get; } = apiKey;
@@ -33,29 +34,47 @@ public sealed class GrokClient(string apiKey, GrokClientOptions options) : IDisp
     public GrokClientOptions Options { get; } = options;
 
     /// <summary>Gets a new instance of <see cref="Auth.AuthClient"/> that reuses the client configuration details provided to the <see cref="GrokClient"/> instance.</summary>
-    public Auth.AuthClient GetAuthClient() => new(Channel);
+    public Auth.AuthClient GetAuthClient() => new(ChannelHandler.Channel);
 
     /// <summary>Gets a new instance of <see cref="Chat.ChatClient"/> that reuses the client configuration details provided to the <see cref="GrokClient"/> instance.</summary>
-    public Chat.ChatClient GetChatClient() => new(Channel, Options);
+    public Chat.ChatClient GetChatClient() => new(ChannelHandler.Channel, Options);
 
     /// <summary>Gets a new instance of <see cref="Documents.DocumentsClient"/> that reuses the client configuration details provided to the <see cref="GrokClient"/> instance.</summary>
-    public Documents.DocumentsClient GetDocumentsClient() => new(Channel);
+    public Documents.DocumentsClient GetDocumentsClient() => new(ChannelHandler.Channel);
 
     /// <summary>Gets a new instance of <see cref="Embedder.EmbedderClient"/> that reuses the client configuration details provided to the <see cref="GrokClient"/> instance.</summary>
-    public Embedder.EmbedderClient GetEmbedderClient() => new(Channel);
+    public Embedder.EmbedderClient GetEmbedderClient() => new(ChannelHandler.Channel);
 
     /// <summary>Gets a new instance of <see cref="Image.ImageClient"/> that reuses the client configuration details provided to the <see cref="GrokClient"/> instance.</summary>
-    public Image.ImageClient GetImageClient() => new(Channel, Options);
+    public Image.ImageClient GetImageClient() => new(ChannelHandler.Channel, Options);
 
     /// <summary>Gets a new instance of <see cref="Models.ModelsClient"/> that reuses the client configuration details provided to the <see cref="GrokClient"/> instance.</summary>
-    public Models.ModelsClient GetModelsClient() => new(Channel);
+    public Models.ModelsClient GetModelsClient() => new(ChannelHandler.Channel);
 
     /// <summary>Gets a new instance of <see cref="Tokenize.TokenizeClient"/> that reuses the client configuration details provided to the <see cref="GrokClient"/> instance.</summary>
-    public Tokenize.TokenizeClient GetTokenizeClient() => new(Channel);
+    public Tokenize.TokenizeClient GetTokenizeClient() => new(ChannelHandler.Channel);
 
-    internal ChannelBase Channel => channels.GetOrAdd((Endpoint, ApiKey), key =>
+    internal (ChannelBase Channel, HttpMessageHandler Handler) ChannelHandler => channels.GetOrAdd((Endpoint, ApiKey), key =>
     {
-        var inner = Options.ChannelOptions?.HttpHandler;
+        var handler = GetHttpHandler(Options.ChannelOptions, key.Item2);
+
+        // Provide some sensible defaults for gRPC channel options, while allowing users to
+        // override them via GrokClientOptions.ChannelOptions if needed.
+        var options = Options.ChannelOptions ?? new GrpcChannelOptions
+        {
+            DisposeHttpClient = true,
+            MaxReceiveMessageSize = 128 * 1024 * 1024,   // large enough for tool output
+            MaxSendMessageSize = 16 * 1024 * 1024,
+        };
+
+        options.HttpHandler = handler;
+
+        return (GrpcChannel.ForAddress(key.Item1, options), handler);
+    });
+
+    static HttpMessageHandler GetHttpHandler(GrpcChannelOptions? options, string apiKey)
+    {
+        var inner = options?.HttpHandler;
         if (inner == null)
         {
             // If no custom HttpHandler is provided, we create one with Polly retry
@@ -94,24 +113,13 @@ public sealed class GrokClient(string apiKey, GrokClientOptions options) : IDisp
             };
         }
 
-        var handler = new AuthenticationHeaderHandler(ApiKey)
+        var handler = string.IsNullOrEmpty(apiKey) ? inner : new AuthenticationHeaderHandler(apiKey)
         {
             InnerHandler = inner
         };
 
-        // Provide some sensible defaults for gRPC channel options, while allowing users to
-        // override them via GrokClientOptions.ChannelOptions if needed.
-        var options = Options.ChannelOptions ?? new GrpcChannelOptions
-        {
-            DisposeHttpClient = true,
-            MaxReceiveMessageSize = 128 * 1024 * 1024,   // large enough for tool output
-            MaxSendMessageSize = 16 * 1024 * 1024,
-        };
-
-        options.HttpHandler = handler;
-
-        return GrpcChannel.ForAddress(Endpoint, options);
-    });
+        return handler;
+    }
 
     /// <summary>Clears the cached list of gRPC channels in the client.</summary>
     public void Dispose() => channels.Clear();
