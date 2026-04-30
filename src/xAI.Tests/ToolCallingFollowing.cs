@@ -7,7 +7,7 @@ namespace xAI.Tests;
 
 public class ToolCallingFollowing(ITestOutputHelper output)
 {
-    [SecretsTheory("XAI_API_KEY")]
+    [SecretsTheory("XAI_API_KEY", Skip = "Comprehensive tests for downstream consumer")]
     [MemberData(nameof(AllDistressMessages))]
     public async Task InvokesDistress(string model, string message)
     {
@@ -35,7 +35,7 @@ public class ToolCallingFollowing(ITestOutputHelper output)
             $"Tools called: [{string.Join(", ", calledTools)}]");
     }
 
-    [SecretsTheory("XAI_API_KEY")]
+    [SecretsTheory("XAI_API_KEY", Skip = "Comprehensive tests for downstream consumer")]
     [MemberData(nameof(AllRoutineMessages))]
     public async Task DoesNotInvokeDistress(string model, string message)
     {

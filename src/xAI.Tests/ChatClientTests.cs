@@ -110,8 +110,8 @@ public class ChatClientTests(ITestOutputHelper output)
             .SelectMany(x => x.Contents)
             .OfType<TextReasoningContent>());
 
-        // The reasoning trace itself should be non-empty
-        Assert.NotEmpty(reasoning.Text ?? "");
+        // The reasoning trace is null or empty since we asked for it to be encrypted
+        Assert.Empty(reasoning.Text);
 
         // With UseEncryptedContent=true the encrypted blob must also be present
         Assert.NotNull(reasoning.ProtectedData);
@@ -750,7 +750,7 @@ public class ChatClientTests(ITestOutputHelper output)
     }
 
     [Fact]
-    public async Task GrokDoesNotAddEmptyContentToToolCallOnlyMessages()
+    public async Task GrokAddsPlaceholderContentToToolCallOnlyMessages()
     {
         GetCompletionsRequest? capturedRequest = null;
         var client = new Mock<xAI.Protocol.Chat.ChatClient>(MockBehavior.Strict);
@@ -779,6 +779,9 @@ public class ChatClientTests(ITestOutputHelper output)
         await grok.GetResponseAsync(messages);
 
         Assert.NotNull(capturedRequest);
+        var assistantMessage = Assert.Single(capturedRequest.Messages, m => m.Role == MessageRole.RoleAssistant);
+        var placeholder = Assert.Single(assistantMessage.Content);
+        Assert.Equal(" ", placeholder.Text);
         // Every Content item in every message must be non-empty; an empty Content block
         // causes the API to return StatusCode="InvalidArgument", Detail="Empty content block".
         Assert.DoesNotContain(capturedRequest.Messages,
