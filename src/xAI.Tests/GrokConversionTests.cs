@@ -285,10 +285,21 @@ public class GrokConversionTests
         return mock.Object;
     }
 
+    static AITool DummyTool() => AIFunctionFactory.Create(() => "", "dummy", "A dummy tool");
+
+    [Fact]
+    public void AsCompletionsRequest_NoTools_DoesNotSetToolChoice()
+    {
+        // xAI rejects ToolChoice when no tools are present
+        var request = CreateClient().AsCompletionsRequest([], new ChatOptions { ToolMode = null });
+
+        Assert.Null(request.ToolChoice);
+    }
+
     [Fact]
     public void AsCompletionsRequest_NullToolMode_SetsAutoToolChoice()
     {
-        var request = CreateClient().AsCompletionsRequest([], new ChatOptions { ToolMode = null });
+        var request = CreateClient().AsCompletionsRequest([], new ChatOptions { ToolMode = null, Tools = [DummyTool()] });
 
         Assert.NotNull(request.ToolChoice);
         Assert.True(request.ToolChoice.HasMode);
@@ -298,7 +309,7 @@ public class GrokConversionTests
     [Fact]
     public void AsCompletionsRequest_AutoToolMode_SetsAutoToolChoice()
     {
-        var request = CreateClient().AsCompletionsRequest([], new ChatOptions { ToolMode = ChatToolMode.Auto });
+        var request = CreateClient().AsCompletionsRequest([], new ChatOptions { ToolMode = ChatToolMode.Auto, Tools = [DummyTool()] });
 
         Assert.NotNull(request.ToolChoice);
         Assert.True(request.ToolChoice.HasMode);
@@ -308,7 +319,7 @@ public class GrokConversionTests
     [Fact]
     public void AsCompletionsRequest_NoneToolMode_SetsNoneToolChoice()
     {
-        var request = CreateClient().AsCompletionsRequest([], new ChatOptions { ToolMode = ChatToolMode.None });
+        var request = CreateClient().AsCompletionsRequest([], new ChatOptions { ToolMode = ChatToolMode.None, Tools = [DummyTool()] });
 
         Assert.NotNull(request.ToolChoice);
         Assert.True(request.ToolChoice.HasMode);
@@ -318,7 +329,7 @@ public class GrokConversionTests
     [Fact]
     public void AsCompletionsRequest_RequireAnyToolMode_SetsRequiredToolChoice()
     {
-        var request = CreateClient().AsCompletionsRequest([], new ChatOptions { ToolMode = ChatToolMode.RequireAny });
+        var request = CreateClient().AsCompletionsRequest([], new ChatOptions { ToolMode = ChatToolMode.RequireAny, Tools = [DummyTool()] });
 
         Assert.NotNull(request.ToolChoice);
         Assert.True(request.ToolChoice.HasMode);
@@ -328,7 +339,7 @@ public class GrokConversionTests
     [Fact]
     public void AsCompletionsRequest_RequireSpecificToolMode_SetsFunctionNameToolChoice()
     {
-        var request = CreateClient().AsCompletionsRequest([], new ChatOptions { ToolMode = ChatToolMode.RequireSpecific("get_weather") });
+        var request = CreateClient().AsCompletionsRequest([], new ChatOptions { ToolMode = ChatToolMode.RequireSpecific("get_weather"), Tools = [DummyTool()] });
 
         Assert.NotNull(request.ToolChoice);
         Assert.True(request.ToolChoice.HasFunctionName);
