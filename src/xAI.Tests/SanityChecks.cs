@@ -446,6 +446,33 @@ public class SanityChecks(ITestOutputHelper output)
         output.WriteLine($"Code interpreter calls: {codeInterpreterCalls.Count}");
     }
 
+    [SecretsFact("CI_XAI_API_KEY")]
+    public async Task StreamingUsageRoughlyMatchesNonStreamingUsage()
+    {
+        var client = new GrokClient(Configuration["CI_XAI_API_KEY"]!)
+            .AsIChatClient("grok-4-1-fast-non-reasoning");
+
+        var prompts = new[]
+        {
+            """Reply with JSON only: {"number":7}""",
+            """Using the previous assistant response, add 5 and reply with JSON only: {"number":12}""",
+            """Using the latest number from this conversation, multiply it by 3 and reply with JSON only: {"number":36}""",
+        };
+
+        var nonStreamingUsage = await GetConversationUsageAsync(client, prompts, streaming: false);
+        var streamingUsage = await GetConversationUsageAsync(client, prompts, streaming: true);
+        var usageDelta = Math.Abs(streamingUsage - nonStreamingUsage) / (double)nonStreamingUsage;
+
+        output.WriteLine($"Non-streaming total tokens: {nonStreamingUsage}");
+        output.WriteLine($"Streaming total tokens: {streamingUsage}");
+        output.WriteLine($"Relative delta: {usageDelta:P2}");
+
+        Assert.True(nonStreamingUsage > 0, "Expected non-streaming total token usage to be reported.");
+        Assert.True(streamingUsage > 0, "Expected streaming total token usage to be reported.");
+        Assert.True(usageDelta <= 0.20,
+            $"Expected streaming total token usage to remain within 20% of non-streaming usage, but got {streamingUsage} vs {nonStreamingUsage} ({usageDelta:P2}).");
+    }
+
     [SecretsTheory("CI_XAI_API_KEY")]
     [InlineData("rex")]
     public async Task TextToSpeech_SpeechToText(string voiceId)
@@ -519,6 +546,38 @@ public class SanityChecks(ITestOutputHelper output)
 
         var updates = await client.GetStreamingResponseAsync(chat, options).ToListAsync();
         return updates.ToChatResponse();
+    }
+
+    static async Task<long> GetConversationUsageAsync(IChatClient client, IReadOnlyList<string> prompts, bool streaming)
+    {
+        var chat = new ChatConversation
+        {
+            { "system", "You are a precise assistant. Reply with compact JSON only." },
+        };
+
+        long totalTokenCount = 0;
+
+        foreach (var prompt in prompts)
+        {
+            chat.Add("user", prompt);
+
+            var response = await GetResponseAsync(client, chat, new GrokChatOptions
+            {
+                ResponseFormat = ChatResponseFormat.Json,
+                Temperature = 0,
+                MaxOutputTokens = 64,
+            }, streaming);
+
+            Assert.NotNull(response.Usage);
+            Assert.NotNull(response.Usage.TotalTokenCount);
+            var tokenCount = response.Usage.TotalTokenCount.Value;
+            Assert.True(tokenCount > 0, $"Expected token usage for prompt '{prompt}'.");
+
+            totalTokenCount += tokenCount;
+            chat.AddRange(response.Messages);
+        }
+
+        return totalTokenCount;
     }
 
     static T ParseJson<T>(ChatResponse response, ITestOutputHelper output)

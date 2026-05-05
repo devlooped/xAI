@@ -70,6 +70,9 @@ class GrokChatClient : IGrokChatClient
         {
             var request = this.AsCompletionsRequest(messages, options);
             var call = client.GetCompletionChunk(request, cancellationToken: cancellationToken);
+            var promptTokens = 0;
+            var completionTokens = 0;
+            var totalTokens = 0;
 
             await foreach (var chunk in call.ResponseStream.ReadAllAsync(cancellationToken))
             {
@@ -107,7 +110,7 @@ class GrokChatClient : IGrokChatClient
                     text is not null)
                     update.Contents.Add(new TextContent(text));
 
-                if (chunk.Usage.Convert() is { } usage)
+                if (ConvertStreamingUsageDelta(chunk.Usage, ref promptTokens, ref completionTokens, ref totalTokens) is { } usage)
                     update.Contents.Add(new UsageContent(usage) { RawRepresentation = chunk.Usage });
 
                 yield return update;
@@ -133,6 +136,34 @@ class GrokChatClient : IGrokChatClient
             FileId = file,
             ToolName = "collections_search",
             Url = new Uri($"collections://{collection}/files/{file}"),
+        };
+    }
+
+    static UsageDetails? ConvertStreamingUsageDelta(SamplingUsage usage, ref int promptTokens, ref int completionTokens, ref int totalTokens)
+    {
+        if (usage == null)
+            return null;
+
+        var reset = usage.PromptTokens < promptTokens
+            || usage.CompletionTokens < completionTokens
+            || usage.TotalTokens < totalTokens;
+
+        var inputDelta = reset ? usage.PromptTokens : usage.PromptTokens - promptTokens;
+        var outputDelta = reset ? usage.CompletionTokens : usage.CompletionTokens - completionTokens;
+        var totalDelta = reset ? usage.TotalTokens : usage.TotalTokens - totalTokens;
+
+        promptTokens = usage.PromptTokens;
+        completionTokens = usage.CompletionTokens;
+        totalTokens = usage.TotalTokens;
+
+        if (inputDelta == 0 && outputDelta == 0 && totalDelta == 0)
+            return null;
+
+        return new UsageDetails
+        {
+            InputTokenCount = inputDelta,
+            OutputTokenCount = outputDelta,
+            TotalTokenCount = totalDelta
         };
     }
 

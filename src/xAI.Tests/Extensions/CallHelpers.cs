@@ -42,5 +42,31 @@ namespace Tests.Client.Helpers
                 () => new Metadata(),
                 () => { });
         }
+
+        public static AsyncServerStreamingCall<TResponse> CreateAsyncServerStreamingCall<TResponse>(params TResponse[] responses)
+        {
+            return new AsyncServerStreamingCall<TResponse>(
+                new TestAsyncStreamReader<TResponse>(responses),
+                Task.FromResult(new Metadata()),
+                () => Status.DefaultSuccess,
+                () => new Metadata(),
+                () => { });
+        }
+
+        class TestAsyncStreamReader<TResponse>(IEnumerable<TResponse> responses) : IAsyncStreamReader<TResponse>
+        {
+            readonly IEnumerator<TResponse> enumerator = responses.GetEnumerator();
+
+            public TResponse Current { get; private set; } = default!;
+
+            public Task<bool> MoveNext(CancellationToken cancellationToken)
+            {
+                if (!enumerator.MoveNext())
+                    return Task.FromResult(false);
+
+                Current = enumerator.Current;
+                return Task.FromResult(true);
+            }
+        }
     }
 }
