@@ -671,6 +671,159 @@ public class ChatClientTests(ITestOutputHelper output)
     }
 
     [Fact]
+    public async Task GrokStreamingResponseUsesUsageDeltas()
+    {
+        var client = new Mock<xAI.Protocol.Chat.ChatClient>(MockBehavior.Strict);
+        client.Setup(x => x.GetCompletionChunk(It.IsAny<GetCompletionsRequest>(), null, null, CancellationToken.None))
+            .Returns(CallHelpers.CreateAsyncServerStreamingCall(
+                new GetChatCompletionChunk
+                {
+                    Id = "response-1",
+                    Model = "grok-4-1-fast-non-reasoning",
+                    Outputs =
+                    {
+                        new CompletionOutputChunk
+                        {
+                            Delta = new Delta
+                            {
+                                Role = MessageRole.RoleAssistant,
+                                Content = "Hello"
+                            },
+                            FinishReason = FinishReason.ReasonInvalid,
+                            Index = 0
+                        }
+                    },
+                    Usage = new SamplingUsage
+                    {
+                        PromptTokens = 10,
+                        CompletionTokens = 2,
+                        TotalTokens = 12
+                    }
+                },
+                new GetChatCompletionChunk
+                {
+                    Id = "response-1",
+                    Model = "grok-4-1-fast-non-reasoning",
+                    Outputs =
+                    {
+                        new CompletionOutputChunk
+                        {
+                            Delta = new Delta
+                            {
+                                Content = " world"
+                            },
+                            FinishReason = FinishReason.ReasonStop,
+                            Index = 0
+                        }
+                    },
+                    Usage = new SamplingUsage
+                    {
+                        PromptTokens = 10,
+                        CompletionTokens = 4,
+                        TotalTokens = 14
+                    }
+                }));
+
+        var grok = new GrokChatClient(client.Object, "grok-4-1-fast-non-reasoning");
+
+        var updates = await grok.GetStreamingResponseAsync("Hi").ToListAsync();
+        var response = updates.ToChatResponse();
+
+        Assert.NotNull(response.Usage);
+        Assert.Equal(10, response.Usage.InputTokenCount);
+        Assert.Equal(4, response.Usage.OutputTokenCount);
+        Assert.Equal(14, response.Usage.TotalTokenCount);
+    }
+
+    [Fact]
+    public async Task GrokStreamingResponseUsageHandlesCounterResets()
+    {
+        var client = new Mock<xAI.Protocol.Chat.ChatClient>(MockBehavior.Strict);
+        client.Setup(x => x.GetCompletionChunk(It.IsAny<GetCompletionsRequest>(), null, null, CancellationToken.None))
+            .Returns(CallHelpers.CreateAsyncServerStreamingCall(
+                new GetChatCompletionChunk
+                {
+                    Id = "response-2",
+                    Model = "grok-4-1-fast-non-reasoning",
+                    Outputs =
+                    {
+                        new CompletionOutputChunk
+                        {
+                            Delta = new Delta
+                            {
+                                Role = MessageRole.RoleAssistant,
+                                Content = "Phase one"
+                            },
+                            FinishReason = FinishReason.ReasonInvalid,
+                            Index = 0
+                        }
+                    },
+                    Usage = new SamplingUsage
+                    {
+                        PromptTokens = 10,
+                        CompletionTokens = 2,
+                        TotalTokens = 12
+                    }
+                },
+                new GetChatCompletionChunk
+                {
+                    Id = "response-2",
+                    Model = "grok-4-1-fast-non-reasoning",
+                    Outputs =
+                    {
+                        new CompletionOutputChunk
+                        {
+                            Delta = new Delta
+                            {
+                                Content = " complete"
+                            },
+                            FinishReason = FinishReason.ReasonInvalid,
+                            Index = 0
+                        }
+                    },
+                    Usage = new SamplingUsage
+                    {
+                        PromptTokens = 10,
+                        CompletionTokens = 4,
+                        TotalTokens = 14
+                    }
+                },
+                new GetChatCompletionChunk
+                {
+                    Id = "response-2",
+                    Model = "grok-4-1-fast-non-reasoning",
+                    Outputs =
+                    {
+                        new CompletionOutputChunk
+                        {
+                            Delta = new Delta
+                            {
+                                Content = " phase two"
+                            },
+                            FinishReason = FinishReason.ReasonStop,
+                            Index = 0
+                        }
+                    },
+                    Usage = new SamplingUsage
+                    {
+                        PromptTokens = 3,
+                        CompletionTokens = 3,
+                        TotalTokens = 6
+                    }
+                }));
+
+        var grok = new GrokChatClient(client.Object, "grok-4-1-fast-non-reasoning");
+
+        var updates = await grok.GetStreamingResponseAsync("Hi").ToListAsync();
+        var response = updates.ToChatResponse();
+
+        Assert.NotNull(response.Usage);
+        Assert.Equal(13, response.Usage.InputTokenCount);
+        Assert.Equal(7, response.Usage.OutputTokenCount);
+        Assert.Equal(20, response.Usage.TotalTokenCount);
+    }
+
+    [Fact]
     public async Task AskFiles()
     {
 
