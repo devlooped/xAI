@@ -1,14 +1,13 @@
 syntax = "proto3";
-option csharp_namespace = "xAI.Protocol";
 
 package xai_api;
 
 import "google/protobuf/timestamp.proto";
-import "deferred.proto";
-import "documents.proto";
-import "image.proto";
-import "sample.proto";
-import "usage.proto";
+import "xai/api/v1/deferred.proto";
+import "xai/api/v1/documents.proto";
+import "xai/api/v1/image.proto";
+import "xai/api/v1/sample.proto";
+import "xai/api/v1/usage.proto";
 
 // An API that exposes our language models via a Chat interface.
 service Chat {
@@ -572,6 +571,7 @@ enum ReasoningEffort {
   EFFORT_LOW = 1;
   EFFORT_MEDIUM = 2;
   EFFORT_HIGH = 3;
+  EFFORT_NONE = 4;
 }
 
 // Number of agents to use for multi-agent models.

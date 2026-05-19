@@ -147,13 +147,13 @@
 	weak
 [file "src/xAI.Protocol/batch.proto"]
 	url = https://github.com/xai-org/xai-proto/blob/main/proto/xai/api/v1/batch.proto
-	sha = 4724d8352feb7d4f13059c1bfd27ef0362f96684
-	etag = 49810c4625d4995815164f4a519f526768386bfaf43d05b346e7fcd5cbe55289
+	sha = 9700be4bfddcb77db9a3d7fb3b69c5e47d704f22
+	etag = 960f0b54fdd30c1680f801e5a1bf53c95438154c0850cb28ef614d808d53e8fe
 	weak
 [file "src/xAI.Protocol/chat.proto"]
 	url = https://github.com/xai-org/xai-proto/blob/main/proto/xai/api/v1/chat.proto
-	sha = e0c743ba0dcd0a7f9b71a4a0d846c6ff3a9b7e4a
-	etag = 8656b4676c39de9d83c9dd8d102e3fce04df98f940536166baf41f893ba56f5d
+	sha = c9345abd85649ecb5b27fe8708f573b4ab9d6971
+	etag = a64a560fdac1cb6d349d38b19a58605fa59169879f3d6d517518e573fd137b8c
 	weak
 [file "src/xAI.Protocol/deferred.proto"]
 	url = https://github.com/xai-org/xai-proto/blob/main/proto/xai/api/v1/deferred.proto
@@ -235,3 +235,4 @@
 	url = https://github.com/xai-org/xai-proto/blob/main/proto/xai/api/v1/files.proto
 	etag = 4c91f851b288a225acfc1173f2f8853a1b550da1e97d2fdcec99debb5f8fac43
 	weak
+	sha = 0c0f5353aa7ab2a4ffea310f9d9364ed5c424af2
