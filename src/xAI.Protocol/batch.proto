@@ -1,12 +1,13 @@
 syntax = "proto3";
-option csharp_namespace = "xAI.Protocol";
 
 package xai_api;
 
 import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
 import "google/rpc/status.proto";
-import "chat.proto";
+import "xai/api/v1/chat.proto";
+import "xai/api/v1/image.proto";
+import "xai/api/v1/video.proto";
 
 // An API service for processing batch requests asynchronously at lower priority than chat service.
 service BatchMgmt {
@@ -66,6 +67,10 @@ message Batch {
 
   // Cost breakdown for processed requests.
   BatchCostBreakdown cost_breakdown = 9;
+
+  // File ID of the uploaded JSONL input file (from Files API). Only set
+  // when the batch was created via file upload.
+  optional string input_file_id = 10;
 }
 
 // Holds aggregate information about the current state of a batch process.
@@ -121,15 +126,25 @@ message BatchRequest {
   oneof request {
     // A completion request to send for processing in the batch.
     GetCompletionsRequest completion_request = 2;
+    // An image generation or editing request to send for processing in the batch.
+    GenerateImageRequest image_request = 3;
+    // A video generation request to send for processing in the batch.
+    GenerateVideoRequest video_request = 4;
+    // A video extension request to send for processing in the batch.
+    ExtendVideoRequest video_extension_request = 5;
   }
 }
 
-// A container for the completion response that is returned in a `BatchResult`.
+// A container for the response that is returned in a `BatchResult`.
 message BatchResultData {
   // The response from the batch request.
   oneof response {
     // A completion response that has finished processing in the batch.
     GetChatCompletionResponse completion_response = 2;
+    // An image generation response that has finished processing in the batch.
+    ImageResponse image_response = 3;
+    // A video generation response that has finished processing in the batch.
+    VideoResponse video_response = 4;
   }
 }
 
@@ -183,6 +198,10 @@ message BatchRequestMetadata {
 message CreateBatchRequest {
   // The name of the batch to be created.
   string name = 1;
+
+  // Optional file ID of a JSONL input file (uploaded via the Files API).
+  // When provided, the batch will be populated from the file's contents.
+  string input_file_id = 2;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -249,6 +268,9 @@ message ListBatchRequestMetadataRequest {
 
   // Optional pagination token to retrieve a specific page. Provided by `pagination_token` in `ListBatchRequestMetadataResponse`.
   optional string pagination_token = 3;
+
+  // Optional filter by request state. If empty, all states are returned.
+  repeated BatchRequestMetadata.State status = 4;
 }
 
 // Response with the metadata of batch requests within a batch.
