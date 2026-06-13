@@ -32,6 +32,12 @@ service Chat {
 
   // Delete a stored response using the response ID.
   rpc DeleteStoredCompletion(DeleteStoredCompletionRequest) returns (DeleteStoredCompletionResponse) {}
+
+  // Compacts a full input context and returns a compacted context.
+  // The client sends the current input items and receives back a compacted
+  // set of items (with an opaque compaction blob) suitable for use as
+  // the input to the next request.
+  rpc CompactContext(CompactContextRequest) returns (CompactContextResponse) {}
 }
 
 message GetCompletionsRequest {
@@ -169,6 +175,10 @@ message GetCompletionsRequest {
   // Number of agents to use for multi-agent models.
   // Only valid when model is a `multi-agent` model. Defaults to `AGENT_COUNT_UNSPECIFIED`.
   optional AgentCount agent_count = 29;
+
+  // Processing tier for this request. Set to SERVICE_TIER_PRIORITY for
+  // higher scheduling priority at a higher price.
+  ServiceTier service_tier = 31;
 }
 
 message GetChatCompletionResponse {
@@ -207,6 +217,13 @@ message GetChatCompletionResponse {
 
   // Debug output. Only available to trusted testers.
   DebugOutput debug_output = 12;
+
+  // Files generated during the response (e.g., by the code execution tool).
+  // Only populated when `INCLUDE_OPTION_CODE_EXECUTION_FILES_OUTPUT` is set.
+  repeated OutputFile output_files = 13;
+
+  // The processing tier that was used for this request.
+  ServiceTier service_tier = 15;
 }
 
 message GetChatCompletionChunk {
@@ -243,6 +260,22 @@ message GetChatCompletionChunk {
 
   // Only available for teams that have debugging privileges.
   DebugOutput debug_output = 10;
+
+  // Files generated during the response (e.g., by the code execution tool).
+  // Only populated for the final chunk when `INCLUDE_OPTION_CODE_EXECUTION_FILES_OUTPUT` is set.
+  repeated OutputFile output_files = 11;
+
+  // The processing tier that was used for this request.
+  ServiceTier service_tier = 12;
+}
+
+// A file generated during a response (e.g., by the code execution tool).
+message OutputFile {
+  // The file ID from the Files API. Use this to download the file.
+  string file_id = 1;
+
+  // The display name of the file.
+  string name = 2;
 }
 
 // Response from GetDeferredCompletion, including the response if the completion
@@ -510,6 +543,9 @@ enum IncludeOption {
   // this option is not included by default.
   // This option is only available for streaming responses.
   INCLUDE_OPTION_VERBOSE_STREAMING = 8;
+
+  // Generated file output from the code execution environment
+  INCLUDE_OPTION_CODE_EXECUTION_FILES_OUTPUT = 9;
 }
 
 // A message in a conversation. This message is part of the model input. Each
@@ -675,6 +711,9 @@ message WebSearch {
   // Setting this will make the agentic search results more relevant to the specified location,
   // which is useful for geolocation-based search results refinement.
   optional WebSearchUserLocation user_location = 4;
+
+  // Enable image search results that can be embedded in responses.
+  optional bool enable_image_search = 5;
 }
 
 // The user location to use for a preference on the search results.
@@ -1126,4 +1165,34 @@ message DebugOutput {
 
   // The tag of the sampler that served this request.
   string sampler_tag = 11;
+}
+
+// ── Context compaction messages ─────────────────────────────────────────
+
+// Request for the standalone CompactContext RPC.
+message CompactContextRequest {
+  // Model to use for generating the compaction blob.
+  string model = 1;
+
+  // Full current input window as proto messages.
+  // This is the same set of messages the client would send in
+  // GetCompletionsRequest.messages.
+  repeated Message input = 2;
+}
+
+// Response from the standalone CompactContext RPC.
+message CompactContextResponse {
+  // Unique compaction ID (e.g. cmp_<uuid>).
+  string id = 1;
+
+  // Opaque blob representing the compacted conversation. Clients must pass
+  // this back unchanged in subsequent requests.
+  string encrypted_content = 2;
+
+  // Number of input Message entries (role + content pairs) from the
+  // original input that were dropped or folded into the compacted blob.
+  uint32 dropped_message_count = 3;
+
+  // Token usage from the compacting model call.
+  SamplingUsage usage = 4;
 }

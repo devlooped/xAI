@@ -80,8 +80,8 @@
 	weak
 [file ".gitignore"]
 	url = https://github.com/devlooped/oss/blob/main/.gitignore
-	sha = 12c18e78c4bbab118b798d04344e5a5253216841
-	etag = 09b499201361a59fad0036e925f4008cdd7bdc6723ba37ff18cc509e6024b2bf
+	sha = c1d29fbde52b1505288e3392e7f5fdcb2299f322
+	etag = f502a2be3b4155fd86675ef45a4364e598979738128a612deb7db59074f93a51
 	weak
 [file "Directory.Build.rsp"]
 	url = https://github.com/devlooped/oss/blob/main/Directory.Build.rsp
@@ -105,13 +105,13 @@
 	weak
 [file "src/Directory.Build.props"]
 	url = https://github.com/devlooped/oss/blob/main/src/Directory.Build.props
-	sha = dd13ed3334135c30dcb1e3b2295dc7622de298d9
-	etag = b2b90c6d617db9712cc8be2031b767d3ba951015717984f52b4872cc39f93e72
+	sha = 6e2438919e108aeb75106dc0737c45f5e55d5f42
+	etag = f1d6384abf18d8d891ce5e835a10c73fe029c42151374be96d7e4af43d189c65
 	weak
 [file "src/Directory.Build.targets"]
 	url = https://github.com/devlooped/oss/blob/main/src/Directory.Build.targets
-	sha = 083a37bd9307ec820bac6ee3c7384083151d36d8
-	etag = 907682e5632a2ba430357e6e042a4ca33cb8c94a3a215d3091aa03f5958a4877
+	sha = c67952501337303eda0fb8b340cb7606666abd8f
+	etag = cb83faed0cc8b930a7b6bdc61bea03a54059858cf04353e55fee94d9e3ae0fad
 	weak
 [file "src/nuget.config"]
 	url = https://github.com/devlooped/oss/blob/main/src/nuget.config
@@ -152,8 +152,8 @@
 	weak
 [file "src/xAI.Protocol/chat.proto"]
 	url = https://github.com/xai-org/xai-proto/blob/main/proto/xai/api/v1/chat.proto
-	sha = c9345abd85649ecb5b27fe8708f573b4ab9d6971
-	etag = a64a560fdac1cb6d349d38b19a58605fa59169879f3d6d517518e573fd137b8c
+	sha = 17a2da08cbbf89aa1f33ffe58b687fe0b2d50468
+	etag = e7da2c915664caf64c0da7d886826de37fcf98753cf613a6ad8aad96f6ddcda5
 	weak
 [file "src/xAI.Protocol/deferred.proto"]
 	url = https://github.com/xai-org/xai-proto/blob/main/proto/xai/api/v1/deferred.proto
@@ -192,8 +192,8 @@
 	weak
 [file "src/xAI.Protocol/usage.proto"]
 	url = https://github.com/xai-org/xai-proto/blob/main/proto/xai/api/v1/usage.proto
-	sha = 362749661fa2d340d234ad372fab920538897821
-	etag = 9fcf9731a547857d554e968968aedc3016fc5210e0a45d5b59d75a03b816a81e
+	sha = d8def643bea79ad10f5a678d70ae37edca26490f
+	etag = 74c44beb7bfd2e75ea0524ff9be820cc067e009b071dee59869a16d372280a0a
 	weak
 [file "src/xAI.Protocol/video.proto"]
 	url = https://github.com/xai-org/xai-proto/blob/main/proto/xai/api/v1/video.proto
