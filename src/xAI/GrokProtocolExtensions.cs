@@ -385,6 +385,7 @@ public static partial class GrokProtocolExtensions
                 else if (content is WebSearchToolResultContent webSearchResult &&
                     webSearchResult.RawRepresentation is ToolCall webSearchToolCall)
                 {
+                    // Grok rejects tool messages that only carry tool_calls metadata with no content items.
                     request.Messages.Add(new Message
                     {
                         Role = MessageRole.RoleTool,
@@ -728,8 +729,13 @@ public static partial class GrokProtocolExtensions
                 continue;
             }
 
-            builder ??= new StringBuilder(single).AppendLine();
-            single = null;
+            if (builder is null)
+            {
+                builder = new StringBuilder();
+                builder.AppendLine(single);
+                single = null;
+            }
+
             builder.AppendLine(text);
         }
 
