@@ -1,13 +1,14 @@
 syntax = "proto3";
+option csharp_namespace = "xAI.Protocol";
 
 package xai_api;
 
 import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
 import "google/rpc/status.proto";
-import "xai/api/v1/chat.proto";
-import "xai/api/v1/image.proto";
-import "xai/api/v1/video.proto";
+import "chat.proto";
+import "image.proto";
+import "video.proto";
 
 // An API service for processing batch requests asynchronously at lower priority than chat service.
 service BatchMgmt {
