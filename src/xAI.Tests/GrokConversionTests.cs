@@ -345,4 +345,128 @@ public class GrokConversionTests
         Assert.True(request.ToolChoice.HasFunctionName);
         Assert.Equal("get_weather", request.ToolChoice.FunctionName);
     }
+
+    [Fact]
+    public void AsCompletionsRequest_MapsSeedStopSequencesParallelToolsReasoningAndConversationId()
+    {
+        var request = CreateClient().AsCompletionsRequest([], new ChatOptions
+        {
+            Seed = 42,
+            StopSequences = ["STOP", "END"],
+            AllowMultipleToolCalls = false,
+            ConversationId = "resp_123",
+            Reasoning = new ReasoningOptions
+            {
+                Effort = Microsoft.Extensions.AI.ReasoningEffort.High,
+            },
+        });
+
+        Assert.True(request.HasSeed);
+        Assert.Equal(42, request.Seed);
+        Assert.Equal(["STOP", "END"], request.Stop);
+        Assert.True(request.HasParallelToolCalls);
+        Assert.False(request.ParallelToolCalls);
+        Assert.Equal("resp_123", request.PreviousResponseId);
+        Assert.True(request.HasReasoningEffort);
+        Assert.Equal(Protocol.ReasoningEffort.EffortHigh, request.ReasoningEffort);
+    }
+
+    [Fact]
+    public void AsCompletionsRequest_StoreMessages_SetsStoreMessages()
+    {
+        var request = CreateClient().AsCompletionsRequest([], new GrokChatOptions
+        {
+            StoreMessages = true,
+        });
+
+        Assert.True(request.StoreMessages);
+    }
+
+    [Fact]
+    public void AsTool_WithWebSearch_EnableImageSearch()
+    {
+        var tool = new GrokSearchTool { EnableImageSearch = true }.AsProtocolTool();
+
+        Assert.NotNull(tool?.WebSearch);
+        Assert.True(tool.WebSearch.EnableImageSearch);
+    }
+
+    [Fact]
+    public void AsContents_WebSearchTool_MapsCallAndResult()
+    {
+        var toolCall = new ToolCall
+        {
+            Id = "ws_1",
+            Type = ToolCallType.WebSearchTool,
+            Function = new FunctionCall
+            {
+                Name = "web_search",
+                Arguments = """{"query":"tesla stock"}""",
+            },
+        };
+
+        var annotations = new List<AIAnnotation>
+        {
+            new CitationAnnotation
+            {
+                Title = "Tesla",
+                Url = new Uri("https://finance.yahoo.com/quote/TSLA"),
+            },
+        };
+
+        var contents = new[] { toolCall }.AsContents("search output", annotations).ToList();
+
+        var call = Assert.IsType<WebSearchToolCallContent>(Assert.Single(contents.OfType<WebSearchToolCallContent>()));
+        Assert.Equal("ws_1", call.CallId);
+        Assert.Equal(["tesla stock"], call.Queries);
+        Assert.Null(call.RawRepresentation);
+
+        var result = Assert.IsType<WebSearchToolResultContent>(Assert.Single(contents.OfType<WebSearchToolResultContent>()));
+        Assert.Equal("ws_1", result.CallId);
+        Assert.Same(toolCall, result.RawRepresentation);
+        Assert.NotNull(result.Outputs);
+        Assert.Contains(result.Outputs!, x => x is UriContent uri && uri.Uri.Host == "finance.yahoo.com");
+        Assert.Contains(result.Outputs!, x => x is TextContent text && text.Text == "search output");
+    }
+
+    [Fact]
+    public void Convert_SamplingUsage_MapsExtendedTokenCounts()
+    {
+        var usage = new SamplingUsage
+        {
+            PromptTokens = 11,
+            CompletionTokens = 7,
+            TotalTokens = 18,
+            ReasoningTokens = 5,
+            CachedPromptTextTokens = 3,
+            PromptTextTokens = 8,
+            PromptImageTokens = 2,
+            NumSourcesUsed = 1,
+            CostInUsdTicks = 123,
+        };
+
+        var details = usage.Convert();
+
+        Assert.NotNull(details);
+        Assert.Equal(11, details.InputTokenCount);
+        Assert.Equal(7, details.OutputTokenCount);
+        Assert.Equal(18, details.TotalTokenCount);
+        Assert.Equal(5, details.ReasoningTokenCount);
+        Assert.Equal(3, details.CachedInputTokenCount);
+        Assert.NotNull(details.AdditionalCounts);
+        Assert.Equal(8, details.AdditionalCounts![nameof(SamplingUsage.PromptTextTokens)]);
+        Assert.Equal(2, details.AdditionalCounts[nameof(SamplingUsage.PromptImageTokens)]);
+        Assert.Equal(1, details.AdditionalCounts[nameof(SamplingUsage.NumSourcesUsed)]);
+        Assert.Equal(123, details.AdditionalCounts[nameof(SamplingUsage.CostInUsdTicks)]);
+    }
+
+    [Fact]
+    public void Convert_ReasoningEffort_MapsKnownValues()
+    {
+        Assert.Equal(Protocol.ReasoningEffort.EffortNone, Microsoft.Extensions.AI.ReasoningEffort.None.Convert());
+        Assert.Equal(Protocol.ReasoningEffort.EffortLow, Microsoft.Extensions.AI.ReasoningEffort.Low.Convert());
+        Assert.Equal(Protocol.ReasoningEffort.EffortMedium, Microsoft.Extensions.AI.ReasoningEffort.Medium.Convert());
+        Assert.Equal(Protocol.ReasoningEffort.EffortHigh, Microsoft.Extensions.AI.ReasoningEffort.High.Convert());
+        Assert.Equal(Protocol.ReasoningEffort.EffortHigh, Microsoft.Extensions.AI.ReasoningEffort.ExtraHigh.Convert());
+    }
 }

@@ -21,6 +21,9 @@ public class GrokSearchTool : HostedWebSearchTool
     /// <summary>See https://docs.x.ai/docs/guides/tools/search-tools#enable-image-understanding</summary>
     public bool EnableImageUnderstanding { get; set; }
 
+    /// <summary>Enable image search results that can be embedded in responses.</summary>
+    public bool EnableImageSearch { get; set; }
+
     /// <summary>Sets the user's country for web search results, using the ISO alpha-2 code.</summary>
     public string? Country { get; set; }
 
