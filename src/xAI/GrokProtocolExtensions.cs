@@ -99,6 +99,8 @@ public static partial class GrokProtocolExtensions
                         websearch.AllowedDomains.AddRange(allowed);
                     if (grokSearch.ExcludedDomains is { } excluded)
                         websearch.ExcludedDomains.AddRange(excluded);
+                    if (grokSearch.EnableImageSearch)
+                        websearch.EnableImageSearch = true;
 
                     return new Tool { WebSearch = websearch };
                 }
@@ -238,6 +240,16 @@ public static partial class GrokProtocolExtensions
         if (options?.TopP is { } topP) request.TopP = topP;
         if (options?.FrequencyPenalty is { } frequencyPenalty) request.FrequencyPenalty = frequencyPenalty;
         if (options?.PresencePenalty is { } presencePenalty) request.PresencePenalty = presencePenalty;
+        if (options?.Seed is { } seed) request.Seed = checked((int)seed);
+        if (options?.AllowMultipleToolCalls is { } parallelToolCalls) request.ParallelToolCalls = parallelToolCalls;
+        if (options?.ConversationId is { Length: > 0 } conversationId) request.PreviousResponseId = conversationId;
+        if (options?.StopSequences is { Count: > 0 } stopSequences)
+            request.Stop.AddRange(stopSequences);
+        if (options?.Reasoning?.Effort is { } effort &&
+            Convert(effort) is { } mappedEffort and not Protocol.ReasoningEffort.InvalidEffort)
+        {
+            request.ReasoningEffort = mappedEffort;
+        }
         if (options?.Instructions is { Length: > 0 } instructions)
         {
             request.Messages.Insert(0, new Message
@@ -350,28 +362,34 @@ public static partial class GrokProtocolExtensions
                 }
                 else if (content is McpServerToolResultContent mcpResult &&
                     mcpResult.RawRepresentation is ToolCall mcpToolCall &&
-                    // TODO: what if there are multiple outputs?
-                    mcpResult.Outputs is { Count: 1 } &&
-                    mcpResult.Outputs[0] is TextContent mcpText)
+                    ConcatTextOutputs(mcpResult.Outputs) is { } mcpText)
                 {
                     request.Messages.Add(new Message
                     {
                         Role = MessageRole.RoleTool,
                         ToolCalls = { mcpToolCall },
-                        Content = { new Content { Text = mcpText.Text } }
+                        Content = { new Content { Text = mcpText } }
                     });
                 }
                 else if (content is CodeInterpreterToolResultContent codeResult &&
                     codeResult.RawRepresentation is ToolCall codeToolCall &&
-                    // TODO: what if there are multiple outputs?
-                    codeResult.Outputs is { Count: 1 } &&
-                    codeResult.Outputs[0] is TextContent codeText)
+                    ConcatTextOutputs(codeResult.Outputs) is { } codeText)
                 {
                     request.Messages.Add(new Message
                     {
                         Role = MessageRole.RoleTool,
                         ToolCalls = { codeToolCall },
-                        Content = { new Content { Text = codeText.Text } }
+                        Content = { new Content { Text = codeText } }
+                    });
+                }
+                else if (content is WebSearchToolResultContent webSearchResult &&
+                    webSearchResult.RawRepresentation is ToolCall webSearchToolCall)
+                {
+                    request.Messages.Add(new Message
+                    {
+                        Role = MessageRole.RoleTool,
+                        ToolCalls = { webSearchToolCall },
+                        Content = { new Content { Text = ConcatTextOutputs(webSearchResult.Outputs) ?? " " } }
                     });
                 }
             }
@@ -396,6 +414,8 @@ public static partial class GrokProtocolExtensions
             }
 
             request.UseEncryptedContent = grokOptions.UseEncryptedContent;
+            if (grokOptions.StoreMessages)
+                request.StoreMessages = true;
         }
 
         if (options?.Tools is not null)
@@ -448,6 +468,25 @@ public static partial class GrokProtocolExtensions
                         Annotations = annotations,
                         RawRepresentation = toolCall,
                     };
+                    break;
+
+                case ToolCallType.WebSearchTool:
+                case ToolCallType.XSearchTool:
+                    yield return new WebSearchToolCallContent(toolCall.Id)
+                    {
+                        Annotations = annotations,
+                        Queries = GetSearchQueries(toolCall),
+                    };
+
+                    if (content is not null || annotations is { Count: > 0 })
+                    {
+                        yield return new WebSearchToolResultContent(toolCall.Id)
+                        {
+                            Annotations = annotations,
+                            RawRepresentation = toolCall,
+                            Outputs = CreateSearchResultOutputs(content, annotations),
+                        };
+                    }
                     break;
 
                 case ToolCallType.McpTool:
@@ -627,12 +666,154 @@ public static partial class GrokProtocolExtensions
         _ => null
     };
 
-    internal static UsageDetails? Convert(this SamplingUsage usage) => usage == null ? null : new()
+    internal static UsageDetails? Convert(this SamplingUsage usage)
     {
-        InputTokenCount = usage.PromptTokens,
-        OutputTokenCount = usage.CompletionTokens,
-        TotalTokenCount = usage.TotalTokens
+        if (usage is null)
+            return null;
+
+        var details = new UsageDetails
+        {
+            InputTokenCount = usage.PromptTokens,
+            OutputTokenCount = usage.CompletionTokens,
+            TotalTokenCount = usage.TotalTokens,
+            ReasoningTokenCount = usage.ReasoningTokens,
+            CachedInputTokenCount = usage.CachedPromptTextTokens,
+        };
+
+        AdditionalPropertiesDictionary<long>? counts = null;
+        void AddCount(string name, long value)
+        {
+            if (value == 0)
+                return;
+
+            (counts ??= [])[name] = value;
+        }
+
+        AddCount(nameof(SamplingUsage.PromptTextTokens), usage.PromptTextTokens);
+        AddCount(nameof(SamplingUsage.PromptImageTokens), usage.PromptImageTokens);
+        AddCount(nameof(SamplingUsage.NumSourcesUsed), usage.NumSourcesUsed);
+        if (usage.HasCostInUsdTicks)
+            AddCount(nameof(SamplingUsage.CostInUsdTicks), usage.CostInUsdTicks);
+
+        details.AdditionalCounts = counts;
+        return details;
+    }
+
+    internal static Protocol.ReasoningEffort Convert(this Microsoft.Extensions.AI.ReasoningEffort effort) => effort switch
+    {
+        Microsoft.Extensions.AI.ReasoningEffort.None => Protocol.ReasoningEffort.EffortNone,
+        Microsoft.Extensions.AI.ReasoningEffort.Low => Protocol.ReasoningEffort.EffortLow,
+        Microsoft.Extensions.AI.ReasoningEffort.Medium => Protocol.ReasoningEffort.EffortMedium,
+        Microsoft.Extensions.AI.ReasoningEffort.High => Protocol.ReasoningEffort.EffortHigh,
+        // xAI does not expose an extra-high tier; map to the strongest available effort.
+        Microsoft.Extensions.AI.ReasoningEffort.ExtraHigh => Protocol.ReasoningEffort.EffortHigh,
+        _ => Protocol.ReasoningEffort.InvalidEffort,
     };
+
+    static string? ConcatTextOutputs(IList<AIContent>? outputs)
+    {
+        if (outputs is null || outputs.Count == 0)
+            return null;
+
+        StringBuilder? builder = null;
+        string? single = null;
+        foreach (var output in outputs)
+        {
+            if (output is not TextContent { Text: { Length: > 0 } text })
+                continue;
+
+            if (single is null && builder is null)
+            {
+                single = text;
+                continue;
+            }
+
+            builder ??= new StringBuilder(single).AppendLine();
+            single = null;
+            builder.AppendLine(text);
+        }
+
+        return builder?.ToString().TrimEnd() ?? single;
+    }
+
+    static IList<string>? GetSearchQueries(ToolCall toolCall)
+    {
+        if (toolCall.Function is null || string.IsNullOrEmpty(toolCall.Function.Arguments))
+            return null;
+
+        try
+        {
+            using var document = JsonDocument.Parse(toolCall.Function.Arguments);
+            var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object)
+                return null;
+
+            if (TryReadQuery(root, "query", out var query) ||
+                TryReadQuery(root, "q", out query) ||
+                TryReadQuery(root, "search_query", out query) ||
+                TryReadQuery(root, "search_term", out query))
+            {
+                return [query];
+            }
+
+            if (root.TryGetProperty("queries", out var queriesElement) && queriesElement.ValueKind == JsonValueKind.Array)
+            {
+                var queries = new List<string>();
+                foreach (var item in queriesElement.EnumerateArray())
+                {
+                    if (item.ValueKind == JsonValueKind.String && item.GetString() is { Length: > 0 } value)
+                        queries.Add(value);
+                }
+
+                return queries.Count > 0 ? queries : null;
+            }
+        }
+        catch (JsonException)
+        {
+            // Arguments are best-effort metadata only.
+        }
+
+        return null;
+
+        static bool TryReadQuery(JsonElement root, string name, out string query)
+        {
+            query = "";
+            if (!root.TryGetProperty(name, out var element) || element.ValueKind != JsonValueKind.String)
+                return false;
+
+            query = element.GetString() ?? "";
+            return query.Length > 0;
+        }
+    }
+
+    static IList<AIContent>? CreateSearchResultOutputs(string? content, List<AIAnnotation>? annotations)
+    {
+        List<AIContent>? outputs = null;
+
+        if (annotations is { Count: > 0 })
+        {
+            foreach (var annotation in annotations.OfType<CitationAnnotation>())
+            {
+                if (annotation.Url is null)
+                    continue;
+
+                (outputs ??= []).Add(new UriContent(annotation.Url, "text/html")
+                {
+                    AdditionalProperties = annotation.Title is null ? null : new AdditionalPropertiesDictionary
+                    {
+                        ["title"] = annotation.Title
+                    },
+                    Annotations = [annotation],
+                    RawRepresentation = annotation.RawRepresentation,
+                });
+            }
+        }
+
+        if (!string.IsNullOrEmpty(content))
+            (outputs ??= []).Add(new TextContent(content));
+
+        return outputs;
+    }
 
     internal static CitationAnnotation FromCitationUrl(this string citationUrl)
     {

@@ -31,4 +31,10 @@ public class GrokChatOptions : ChatOptions
 
     /// <summary>Whether to use encrypted thinking for thinking trace rehydration.</summary>
     public bool UseEncryptedContent { get; set; }
+
+    /// <summary>
+    /// Whether to store request and responses so later turns can continue via
+    /// <see cref="ChatOptions.ConversationId"/> / <c>previous_response_id</c>.
+    /// </summary>
+    public bool StoreMessages { get; set; }
 }

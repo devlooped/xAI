@@ -7,3 +7,6 @@
 - TTS defaults follow xAI docs: voice `eve`, language `en` when omitted by `TextToSpeechOptions`, and MP3 output when no codec is specified.
 - STT streaming defaults follow xAI docs: encoding `pcm` and sample rate `16000` when omitted; WebSocket input must be raw encoded audio, not MP3/WAV container bytes.
 - Chat streaming `GetChatCompletionChunk.Usage` values are cumulative within a sampling segment and may reset across tool-driven segments; emit deltas (or restart deltas after a reset) so `ToChatResponse()` totals match non-streaming usage.
+- `ChatOptions` mappings include `Seed`, `StopSequences`, `AllowMultipleToolCalls` → `parallel_tool_calls`, `Reasoning.Effort` → `reasoning_effort`, and `ConversationId` → `previous_response_id`. `GrokChatOptions.StoreMessages` enables stored responses and surfaces `ChatResponse.ConversationId`.
+- `UsageDetails` maps `ReasoningTokenCount` and `CachedInputTokenCount` from xAI usage, plus prompt text/image/source/cost details in `AdditionalCounts`.
+- Web/X search tool calls map to MEAI `WebSearchToolCallContent` / `WebSearchToolResultContent` (queries from tool arguments when present; citation URLs become `UriContent` outputs).

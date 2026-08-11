@@ -53,6 +53,9 @@ class GrokChatClient : IGrokChatClient
             CreatedAt = response.Created?.ToDateTimeOffset(),
             FinishReason = lastOutput != null ? lastOutput.FinishReason.Convert() : null,
             Usage = response.Usage.Convert(),
+            // Only expose a conversation id when the request asked xAI to store messages,
+            // since PreviousResponseId chaining requires a stored response.
+            ConversationId = request.StoreMessages ? response.Id : null,
         };
 
         var citations = response.Citations?.Distinct().Select(x => x.FromCitationUrl()).ToList<AIAnnotation>();
@@ -73,6 +76,8 @@ class GrokChatClient : IGrokChatClient
             var promptTokens = 0;
             var completionTokens = 0;
             var totalTokens = 0;
+            var reasoningTokens = 0;
+            var cachedPromptTokens = 0;
 
             await foreach (var chunk in call.ResponseStream.ReadAllAsync(cancellationToken))
             {
@@ -107,10 +112,14 @@ class GrokChatClient : IGrokChatClient
                 // Only append text content if it's not already part of other tools' content
                 if (!update.Contents.OfType<CodeInterpreterToolResultContent>().Any() &&
                     !update.Contents.OfType<McpServerToolResultContent>().Any() &&
+                    !update.Contents.OfType<WebSearchToolResultContent>().Any() &&
                     text is not null)
                     update.Contents.Add(new TextContent(text));
 
-                if (ConvertStreamingUsageDelta(chunk.Usage, ref promptTokens, ref completionTokens, ref totalTokens) is { } usage)
+                if (request.StoreMessages)
+                    update.ConversationId = chunk.Id;
+
+                if (ConvertStreamingUsageDelta(chunk.Usage, ref promptTokens, ref completionTokens, ref totalTokens, ref reasoningTokens, ref cachedPromptTokens) is { } usage)
                     update.Contents.Add(new UsageContent(usage) { RawRepresentation = chunk.Usage });
 
                 yield return update;
@@ -139,31 +148,45 @@ class GrokChatClient : IGrokChatClient
         };
     }
 
-    static UsageDetails? ConvertStreamingUsageDelta(SamplingUsage usage, ref int promptTokens, ref int completionTokens, ref int totalTokens)
+    static UsageDetails? ConvertStreamingUsageDelta(
+        SamplingUsage usage,
+        ref int promptTokens,
+        ref int completionTokens,
+        ref int totalTokens,
+        ref int reasoningTokens,
+        ref int cachedPromptTokens)
     {
         if (usage == null)
             return null;
 
         var reset = usage.PromptTokens < promptTokens
             || usage.CompletionTokens < completionTokens
-            || usage.TotalTokens < totalTokens;
+            || usage.TotalTokens < totalTokens
+            || usage.ReasoningTokens < reasoningTokens
+            || usage.CachedPromptTextTokens < cachedPromptTokens;
 
         var inputDelta = reset ? usage.PromptTokens : usage.PromptTokens - promptTokens;
         var outputDelta = reset ? usage.CompletionTokens : usage.CompletionTokens - completionTokens;
         var totalDelta = reset ? usage.TotalTokens : usage.TotalTokens - totalTokens;
+        var reasoningDelta = reset ? usage.ReasoningTokens : usage.ReasoningTokens - reasoningTokens;
+        var cachedDelta = reset ? usage.CachedPromptTextTokens : usage.CachedPromptTextTokens - cachedPromptTokens;
 
         promptTokens = usage.PromptTokens;
         completionTokens = usage.CompletionTokens;
         totalTokens = usage.TotalTokens;
+        reasoningTokens = usage.ReasoningTokens;
+        cachedPromptTokens = usage.CachedPromptTextTokens;
 
-        if (inputDelta == 0 && outputDelta == 0 && totalDelta == 0)
+        if (inputDelta == 0 && outputDelta == 0 && totalDelta == 0 && reasoningDelta == 0 && cachedDelta == 0)
             return null;
 
         return new UsageDetails
         {
             InputTokenCount = inputDelta,
             OutputTokenCount = outputDelta,
-            TotalTokenCount = totalDelta
+            TotalTokenCount = totalDelta,
+            ReasoningTokenCount = reasoningDelta,
+            CachedInputTokenCount = cachedDelta,
         };
     }
 
