@@ -1,14 +1,13 @@
 syntax = "proto3";
-option csharp_namespace = "xAI.Protocol";
 
 package xai_api;
 
 import "google/protobuf/timestamp.proto";
-import "deferred.proto";
-import "documents.proto";
-import "image.proto";
-import "sample.proto";
-import "usage.proto";
+import "xai/api/v1/deferred.proto";
+import "xai/api/v1/documents.proto";
+import "xai/api/v1/image.proto";
+import "xai/api/v1/sample.proto";
+import "xai/api/v1/usage.proto";
 
 // An API that exposes our language models via a Chat interface.
 service Chat {
@@ -144,7 +143,7 @@ message GetCompletionsRequest {
   // new topics.
   optional float presence_penalty = 9;
 
-  // Constrains effort on reasoning for reasoning models. Default to `EFFORT_MEDIUM`.
+  // Constrains effort on reasoning for reasoning models. Defaults vary by model (e.g. `grok-4.5` and `grok-4.6` default to `EFFORT_HIGH`).
   optional ReasoningEffort reasoning_effort = 19;
 
   // Set the parameters to be used for realtime data. If not set, no realtime data will be acquired by the model.
@@ -609,6 +608,7 @@ enum ReasoningEffort {
   EFFORT_MEDIUM = 2;
   EFFORT_HIGH = 3;
   EFFORT_NONE = 4;
+  EFFORT_XHIGH = 5;
 }
 
 // Number of agents to use for multi-agent models.
@@ -672,6 +672,8 @@ message Tool {
     MCP mcp = 7;
     // Built in attachment search.
     AttachmentSearch attachment_search = 8;
+    // Built in image generation.
+    ImageGeneration image_generation = 10;
   }
 }
 
@@ -767,6 +769,13 @@ message XSearch {
 
 message CodeExecution {}
 
+message ImageGeneration {
+  // Which image capabilities to expose to the model. One of "auto" (the default;
+  // both generation and editing), "generate" (text-to-image only), or
+  // "edit" (image editing only).
+  optional string action = 1;
+}
+
 message CollectionsSearch {
   // The ID(s) of the source collection(s) within which the search should be performed.
   // A maximum of 10 collections IDs can be used for search.
@@ -839,6 +848,10 @@ enum ToolCallType {
   // Indicates the tool is a server-side attachment_search tool, and client side won't need to execute.
   // Maps to `attachment_search_call` type in OAI Responses API.
   TOOL_CALL_TYPE_ATTACHMENT_SEARCH_TOOL = 7;
+
+  // Indicates the tool is a server-side image_generation tool, and client side won't need to execute.
+  // Maps to `image_generation_call` type in OAI Responses API.
+  TOOL_CALL_TYPE_IMAGE_GENERATION_TOOL = 10;
 }
 
 enum ToolCallStatus {
@@ -1059,7 +1072,7 @@ message RequestSettings {
   // The ID of the previous response from the model.
   optional string previous_response_id = 3;
 
-  // Constrains effort on reasoning for reasoning models. Default to `EFFORT_MEDIUM`.
+  // Constrains effort on reasoning for reasoning models. Defaults vary by model (e.g. `grok-4.5` and `grok-4.6` default to `EFFORT_HIGH`).
   optional ReasoningEffort reasoning_effort = 4;
 
   // A number between 0 and 2 used to control the variance of completions.
