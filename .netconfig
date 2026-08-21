@@ -105,13 +105,13 @@
 	weak
 [file "src/Directory.Build.props"]
 	url = https://github.com/devlooped/oss/blob/main/src/Directory.Build.props
-	sha = 6e2438919e108aeb75106dc0737c45f5e55d5f42
-	etag = f1d6384abf18d8d891ce5e835a10c73fe029c42151374be96d7e4af43d189c65
+	sha = 59861ddd1e330f3da410652b4c7fc6585726c0cf
+	etag = 1561f1be53cc25ac0cd85a06b3f65d69764b174d0f60bf72ca2f8fc70573b75e
 	weak
 [file "src/Directory.Build.targets"]
 	url = https://github.com/devlooped/oss/blob/main/src/Directory.Build.targets
-	sha = 3a758f47e8955c15a016b3db08f383781cbdee26
-	etag = 22005ab28676aa6d790171003057c81fe4ceec01251626385a3dcef3417ae3cd
+	sha = 59861ddd1e330f3da410652b4c7fc6585726c0cf
+	etag = cb1f7a3e5bf85e7307407b7b6d8b9869330e2191a2317ccf6218a552e5890b08
 	weak
 [file "src/nuget.config"]
 	url = https://github.com/devlooped/oss/blob/main/src/nuget.config
@@ -152,8 +152,8 @@
 	weak
 [file "src/xAI.Protocol/chat.proto"]
 	url = https://github.com/xai-org/xai-proto/blob/main/proto/xai/api/v1/chat.proto
-	sha = 17a2da08cbbf89aa1f33ffe58b687fe0b2d50468
-	etag = e7da2c915664caf64c0da7d886826de37fcf98753cf613a6ad8aad96f6ddcda5
+	sha = 2c2df4f5d9429f5f21e58bb9e63285c69bcc144f
+	etag = 061acaded15e83e3056dfcb1a738cd6aa0cad27f7f6ec38b6bf84e3077d448ac
 	weak
 [file "src/xAI.Protocol/deferred.proto"]
 	url = https://github.com/xai-org/xai-proto/blob/main/proto/xai/api/v1/deferred.proto
@@ -172,8 +172,8 @@
 	weak
 [file "src/xAI.Protocol/image.proto"]
 	url = https://github.com/xai-org/xai-proto/blob/main/proto/xai/api/v1/image.proto
-	sha = d67bcf3e661aa9641af9750632fa1c38ea974da1
-	etag = 3ea27e240320c26d14b8c64d00f236c078127ebdb6fa957efc49232dfd75a20c
+	sha = 2c2df4f5d9429f5f21e58bb9e63285c69bcc144f
+	etag = 3d66f35d2e1555c6eae2218705b6f8ee5fa6537939b6ae0a18e0a2fd13a81bff
 	weak
 [file "src/xAI.Protocol/models.proto"]
 	url = https://github.com/xai-org/xai-proto/blob/main/proto/xai/api/v1/models.proto
@@ -192,13 +192,13 @@
 	weak
 [file "src/xAI.Protocol/usage.proto"]
 	url = https://github.com/xai-org/xai-proto/blob/main/proto/xai/api/v1/usage.proto
-	sha = d8def643bea79ad10f5a678d70ae37edca26490f
-	etag = 74c44beb7bfd2e75ea0524ff9be820cc067e009b071dee59869a16d372280a0a
+	sha = 2c2df4f5d9429f5f21e58bb9e63285c69bcc144f
+	etag = 0bf9577be87d3cfc79895971071ef1eaa78645cb784462e7e90bff03440dfff4
 	weak
 [file "src/xAI.Protocol/video.proto"]
 	url = https://github.com/xai-org/xai-proto/blob/main/proto/xai/api/v1/video.proto
-	sha = 43a1b6b731943b8f031c2f2d946f7183f0933ffd
-	etag = 37562e78a6d64800b09c643632a33b6bc902955b491114bd5b6ec957d23d6e64
+	sha = 723dd2aa22d17be35617463837dc47cda008d90e
+	etag = 24af69223d5fafc1ae8554f1ee43fdb0ff8c1eeacfa2e8ce9719fd58179d2fb8
 	weak
 [file "src/xAI.Protocol/google/protobuf/timestamp.proto"]
 	url = https://github.com/protocolbuffers/protobuf/blob/main/src/google/protobuf/timestamp.proto
@@ -233,6 +233,6 @@
 	weak
 [file "src/xAI.Protocol/files.proto"]
 	url = https://github.com/xai-org/xai-proto/blob/main/proto/xai/api/v1/files.proto
-	etag = 4c91f851b288a225acfc1173f2f8853a1b550da1e97d2fdcec99debb5f8fac43
+	etag = b5e8ed748220b2fa727e8845f09f612cb77813d02c4260b77e6464aa0c98d57f
 	weak
-	sha = 0c0f5353aa7ab2a4ffea310f9d9364ed5c424af2
+	sha = c666ac39e9a8f562e94b2b57872a75bc1438ec2b

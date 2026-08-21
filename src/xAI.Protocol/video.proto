@@ -1,11 +1,10 @@
 syntax = "proto3";
-option csharp_namespace = "xAI.Protocol";
 
 package xai_api;
 
-import "deferred.proto";
-import "image.proto";
-import "usage.proto";
+import "xai/api/v1/deferred.proto";
+import "xai/api/v1/image.proto";
+import "xai/api/v1/usage.proto";
 
 // Aspect ratio for video generation.
 enum VideoAspectRatio {
@@ -46,13 +45,41 @@ enum VideoResolution {
   // 720p resolution.
   // Dimensions vary by aspect ratio
   VIDEO_RESOLUTION_720P = 2;
+
+  // 1080p resolution.
+  // Dimensions vary by aspect ratio.
+  // Supported on models that advertise 1080p (e.g. grok-imagine-video-1.5 for
+  // image-to-video); not available on all video models.
+  VIDEO_RESOLUTION_1080P = 3;
 }
 
-// Specifies a video by URL for video editing.
+// Specifies a video by URL or file reference for video editing.
 message VideoUrlContent {
-  // Either a URL of the video (e.g., a public URL) or a base64-encoded video
-  // as a data URL (e.g., "data:video/mp4;base64,...").
-  string url = 1;
+  // The source of the video — either a direct URL/base64 string or a
+  // file_id from the xAI Files API. Exactly one must be set.
+  oneof source {
+    // Either a URL of the video (e.g., a public URL) or a base64-encoded video
+    // as a data URL (e.g., "data:video/mp4;base64,...").
+    string url = 1;
+
+    // A file ID from the xAI Files API. The file must be a video
+    // (e.g., MP4).
+    string file_id = 2;
+  }
+}
+
+// Reference audio input for video generation.
+message AudioUrlContent {
+  reserved 1;
+
+  // The source of the audio. Must be set.
+  oneof source {
+    // Identifier of a first-party preset voice (e.g. "ara"), using the same
+    // voice identifiers as the TTS API. Resolved server-side to a curated
+    // reference clip from the model's voice-preset catalog. Only supported
+    // by models that accept reference audio.
+    string voice_id = 2;
+  }
 }
 
 // An API service for interaction with video generation models.
@@ -111,6 +138,26 @@ message GenerateVideoRequest {
   // When provided (and `image` is not set), generates video using these images
   // as style/content references.
   repeated ImageUrlContent reference_images = 13;
+
+  // Optional output storage configuration. When present, the generated
+  // video is stored in the Files API and a file_id is returned in
+  // the response alongside the ephemeral URL.
+  optional StorageOptions storage_options = 14;
+
+  reserved 15;
+
+  // Optional reference audio (voice identity) for reference-to-video
+  // generation. Each entry selects a first-party preset voice via
+  // `voice_id` (same identifiers as the TTS API). Only supported by select
+  // video models; at most three entries. May be provided without
+  // reference_images (audio-only reference-to-video) — at least one
+  // reference of either kind selects the reference-to-video mode.
+  repeated AudioUrlContent reference_audios = 16;
+
+  // Whether the generated video includes an audio track. Defaults to true.
+  // Set to false for a silent video (the audio track is stripped
+  // server-side after generation).
+  optional bool generate_audio = 17;
 }
 
 // Request for retrieving deferred video generation results.
@@ -155,6 +202,15 @@ message GeneratedVideo {
   // The field will be true if the video respects moderation rules. Otherwise
   // the field will be false and the video url field will be empty.
   bool respect_moderation = 5;
+
+  // Storage info for the generated video. Only present when the request
+  // included `storage_options` and the upload succeeded.
+  optional FileOutput file_output = 6;
+
+  // Human-readable error when `storage_options` was set but the upload
+  // failed. Only present on storage failure; absent on success or when
+  // storage was not requested.
+  optional string storage_error = 7;
 }
 
 // Response from GetDeferredVideo, including the response if the video
@@ -192,4 +248,11 @@ message ExtendVideoRequest {
   // Duration of the extension segment to generate in seconds (1-10).
   // Defaults to 6 seconds if not specified.
   optional int32 duration = 4;
+
+  // Optional output storage configuration. When present, the generated
+  // video is stored in the Files API and a file_id is returned in
+  // the response alongside the ephemeral URL.
+  optional StorageOptions storage_options = 6;
+
+  reserved 7;
 }
