@@ -1,14 +1,13 @@
 syntax = "proto3";
-option csharp_namespace = "xAI.Protocol";
 
 package xai_api;
 
 import "google/protobuf/timestamp.proto";
-import "deferred.proto";
-import "documents.proto";
-import "image.proto";
-import "sample.proto";
-import "usage.proto";
+import "xai/api/v1/deferred.proto";
+import "xai/api/v1/documents.proto";
+import "xai/api/v1/image.proto";
+import "xai/api/v1/sample.proto";
+import "xai/api/v1/usage.proto";
 
 // An API that exposes our language models via a Chat interface.
 service Chat {
@@ -144,7 +143,7 @@ message GetCompletionsRequest {
   // new topics.
   optional float presence_penalty = 9;
 
-  // Constrains effort on reasoning for reasoning models. Default to `EFFORT_MEDIUM`.
+  // Constrains effort on reasoning for reasoning models. Defaults vary by model (e.g. `grok-4.5` and `grok-4.6` default to `EFFORT_HIGH`).
   optional ReasoningEffort reasoning_effort = 19;
 
   // Set the parameters to be used for realtime data. If not set, no realtime data will be acquired by the model.
@@ -547,6 +546,30 @@ enum IncludeOption {
 
   // Generated file output from the code execution environment
   INCLUDE_OPTION_CODE_EXECUTION_FILES_OUTPUT = 9;
+
+  // EXPERIMENTAL: This option is experimental and its behavior may change or be
+  // removed in a future release without a major version bump.
+  //
+  // Stream back client-side tool calls incrementally as the model generates
+  // them, instead of only emitting each tool call once it is complete.
+  // When included, the stream contains additional `ToolCall` entries in
+  // `Delta.tool_calls` with `status` set to `TOOL_CALL_STATUS_IN_PROGRESS`.
+  // Each such entry carries a fragment of the `FunctionCall.name` and/or
+  // `FunctionCall.arguments` (either may be empty) that the client should
+  // append to the tool call identified by the entry's `id` and `index`.
+  // Once generation finishes, a final `ToolCall` with `status` set to
+  // `TOOL_CALL_STATUS_COMPLETED` is streamed containing the full name and
+  // arguments, so clients that do not want to accumulate fragments can rely
+  // on that entry alone.
+  // This option is only available for streaming responses and is only
+  // supported by models that support it; it is ignored otherwise.
+  //
+  // KNOWN ISSUE: This option is currently broken when the request also uses
+  // any server-side tool (for example web search, X search, code execution,
+  // collections search, or MCP). Do not combine this option with server-side
+  // tools; only use it with requests whose tools are all client-side
+  // functions.
+  INCLUDE_OPTION_TOOL_CALL_STREAMING = 10;
 }
 
 // A message in a conversation. This message is part of the model input. Each
@@ -609,6 +632,7 @@ enum ReasoningEffort {
   EFFORT_MEDIUM = 2;
   EFFORT_HIGH = 3;
   EFFORT_NONE = 4;
+  EFFORT_XHIGH = 5;
 }
 
 // Number of agents to use for multi-agent models.
@@ -672,6 +696,8 @@ message Tool {
     MCP mcp = 7;
     // Built in attachment search.
     AttachmentSearch attachment_search = 8;
+    // Built in image generation.
+    ImageGeneration image_generation = 10;
   }
 }
 
@@ -767,6 +793,13 @@ message XSearch {
 
 message CodeExecution {}
 
+message ImageGeneration {
+  // Which image capabilities to expose to the model. One of "auto" (the default;
+  // both generation and editing), "generate" (text-to-image only), or
+  // "edit" (image editing only).
+  optional string action = 1;
+}
+
 message CollectionsSearch {
   // The ID(s) of the source collection(s) within which the search should be performed.
   // A maximum of 10 collections IDs can be used for search.
@@ -839,6 +872,10 @@ enum ToolCallType {
   // Indicates the tool is a server-side attachment_search tool, and client side won't need to execute.
   // Maps to `attachment_search_call` type in OAI Responses API.
   TOOL_CALL_TYPE_ATTACHMENT_SEARCH_TOOL = 7;
+
+  // Indicates the tool is a server-side image_generation tool, and client side won't need to execute.
+  // Maps to `image_generation_call` type in OAI Responses API.
+  TOOL_CALL_TYPE_IMAGE_GENERATION_TOOL = 10;
 }
 
 enum ToolCallStatus {
@@ -869,6 +906,15 @@ message ToolCall {
 
   // Error message if the tool call is failed.
   optional string error_message = 4;
+
+  // EXPERIMENTAL: This field is experimental and its behavior may change or be
+  // removed in a future release without a major version bump.
+  //
+  // The index of the tool call within the message's `tool_calls` array.
+  // Only populated on the incremental `TOOL_CALL_STATUS_IN_PROGRESS` entries
+  // streamed when `INCLUDE_OPTION_TOOL_CALL_STREAMING` is requested, so that
+  // clients can accumulate fragments belonging to the same tool call.
+  optional int32 index = 5;
 
   // Information regarding invoking the tool call.
   oneof tool {
@@ -1059,7 +1105,7 @@ message RequestSettings {
   // The ID of the previous response from the model.
   optional string previous_response_id = 3;
 
-  // Constrains effort on reasoning for reasoning models. Default to `EFFORT_MEDIUM`.
+  // Constrains effort on reasoning for reasoning models. Defaults vary by model (e.g. `grok-4.5` and `grok-4.6` default to `EFFORT_HIGH`).
   optional ReasoningEffort reasoning_effort = 4;
 
   // A number between 0 and 2 used to control the variance of completions.
