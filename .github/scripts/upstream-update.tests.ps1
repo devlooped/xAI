@@ -649,7 +649,7 @@ try {
         $bin = Join-Path $root 'bin'
         $fake = Join-Path $root 'real'
         foreach ($directory in @($bin, $fake)) { [IO.Directory]::CreateDirectory($directory) | Out-Null }
-        [IO.File]::WriteAllText((Join-Path $bin 'curl'), "#!/bin/bash`nprintf '%s\n' `"`$1`" > '$root/curl-url'`nprintf '%s' '[{`"type`":`"file`"}]'`n")
+        [IO.File]::WriteAllText((Join-Path $bin 'curl'), "#!/bin/bash`nprintf '%s\n' `"`$*`" > '$root/curl-url'`nprintf '%s' '[{`"type`":`"file`"}]'`n")
         [IO.File]::WriteAllText((Join-Path $fake 'gh'), "#!/bin/bash`nprintf '%s\n' `"`$*`"`n")
         & chmod +x (Join-Path $bin 'curl') (Join-Path $fake 'gh')
         $shim = Join-Path $root 'shim'
