@@ -106,3 +106,15 @@ jobs:
         run: |
           dotnet format whitespace --verify-no-changes -v:diag --exclude ~/.nuget
           dotnet format style --verify-no-changes -v:diag --exclude ~/.nuget
+
+  upstream-automation:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Check upstream orchestration fixtures
+        shell: pwsh
+        run: .github/scripts/upstream-update.tests.ps1

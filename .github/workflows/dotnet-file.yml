@@ -1,21 +1,68 @@
-# Synchronizes .netconfig-configured files with dotnet-file
-name: dotnet-file
+name: Upstream SDK update
 on:
   workflow_dispatch:
+    inputs:
+      dry-run:
+        description: Collect evidence without starting a paid cloud-agent session
+        type: boolean
+        default: true
+      resume:
+        description: Resume a blocked cycle after inspecting its agent session
+        type: boolean
+        default: false
   schedule:
-    - cron: "0 0 * * *"
-  push:
-    branches: [ 'dotnet-file' ]
+    - cron: "23 6 * * 1"
+
+concurrency:
+  group: upstream-sdk-update
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
 
 env:
   DOTNET_NOLOGO: true
 
 jobs:
-  run:
-    permissions:
-      contents: write
-    uses: devlooped/oss/.github/workflows/dotnet-file-core.yml@main
-    secrets: 
-      BOT_NAME: ${{ secrets.BOT_NAME }}
-      BOT_EMAIL: ${{ secrets.BOT_EMAIL }}
-      GH_TOKEN: ${{ secrets.GH_TOKEN }}
+  update:
+    if: github.event_name == 'workflow_dispatch' || vars.UPSTREAM_UPDATE_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+          fetch-depth: 0
+
+      - uses: devlooped/actions-dotnet-env@v1
+
+      - name: Check orchestration
+        run: .github/scripts/upstream-update.tests.ps1
+
+      - name: Collect pinned upstream evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: .github/scripts/upstream-update.ps1 -Mode Collect -Output "$env:RUNNER_TEMP/upstream-evidence"
+
+      - name: Preserve evidence, including incomplete inputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: upstream-evidence
+          path: ${{ runner.temp }}/upstream-evidence
+          if-no-files-found: warn
+
+      - name: Assign or continue Copilot
+        if: github.event_name == 'schedule' || !inputs.dry-run
+        env:
+          GH_TOKEN: ${{ secrets.UPSTREAM_UPDATE_TOKEN }}
+          RESUME: ${{ inputs.resume }}
+        run: |
+          .github/scripts/upstream-update.ps1 -Mode Dispatch `
+            -ManifestPath "$env:RUNNER_TEMP/upstream-evidence/manifest.json" `
+            -Resume:($env:RESUME -eq 'true')

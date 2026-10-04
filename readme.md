@@ -21,6 +21,13 @@
 xAI .NET SDK based on the official gRPC API reference from xAI with integration for 
 Microsoft.Extensions.AI and Microsoft.Agents.AI.
 
+Upstream maintenance combines weekly checks of xAI's protocols and documented
+HTTP/WebSocket APIs with stable Microsoft.Extensions.AI updates. Relevant SDK
+integrations, regression tests, and documentation are proposed together in a
+human-reviewed PR, with explicit coverage decisions and enhancement/fix release
+notes rather than a protocol-only file bump. See [maintenance setup](AGENTS.md#comprehensive-upstream-maintenance)
+for contributor configuration and operation.
+
 <!-- include https://github.com/devlooped/.github/raw/main/osmf.md -->
 ## Open Source Maintenance Fee
 
