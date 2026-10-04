@@ -19,6 +19,7 @@ $script:blockedLabel = 'upstream-update-blocked'
 $script:evidenceHeading = '## Upstream update evidence'
 $script:stateHeading = '## Upstream update state'
 $script:resultHeading = '## Upstream update result'
+$script:publicCommit = $null
 
 function Invoke-Tool([string] $Name, [string[]] $Arguments, [int[]] $ExitCodes = @(0)) {
     $text = & $Name @Arguments 2>&1
@@ -100,7 +101,8 @@ function ConvertFrom-GitHubBase64([string] $Content) {
 }
 
 function Get-PublicCommit([string] $Repo, [string] $Ref) {
-    if ($script:publicCommit) { return & $script:publicCommit $Repo $Ref }
+    $hook = Get-Variable -Name publicCommit -Scope Script -ErrorAction SilentlyContinue
+    if ($hook -and $hook.Value) { return & $hook.Value $Repo $Ref }
     $uri = "https://api.github.com/repos/$Repo/commits/$([Uri]::EscapeDataString($Ref))"
     $response = Invoke-WebRequest -Uri $uri -Headers @{
         Accept = 'application/vnd.github+json'

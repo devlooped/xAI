@@ -591,6 +591,21 @@ try {
         $decoded = [Text.Encoding]::UTF8.GetString((ConvertFrom-GitHubBase64 $encoded))
         Assert ($decoded -eq $payload) 'Wrapped GitHub content was not decoded.'
     }
+    Test-Case 'an absent public commit hook stays on the anonymous request' {
+        Remove-Variable -Name publicCommit -Scope Script -ErrorAction SilentlyContinue
+        function script:Invoke-WebRequest {
+            param($Uri, $Headers, $TimeoutSec, $MaximumRetryCount)
+            return @{ Content = (@{ sha = 'f' * 40 } | ConvertTo-Json -Compress) }
+        }
+        try {
+            $entries = @(@{ path = 'src/xAI.Protocol/.'; skip = $false
+                url = 'https://github.com/xai-org/xai-proto/tree/main/proto/xai/api/v1/' })
+            $revisions = @(Get-Revisions $entries)
+            Assert ($revisions[0].sha -eq ('f' * 40)) 'Unset hook did not reach the anonymous request.'
+            Assert ($script:calls.Count -eq 0) 'Unset hook used the workflow token.'
+        }
+        finally { Remove-Item function:script:Invoke-WebRequest -ErrorAction SilentlyContinue }
+    }
     Test-Case 'public revision pinning does not use the workflow token' {
         $script:publicCommit = { param($Repo, $Ref) @{ sha = 'd' * 40 } }
         $entries = @(@{ path = 'src/xAI.Protocol/.'; skip = $false
