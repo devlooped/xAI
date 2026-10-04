@@ -95,6 +95,62 @@ function Get-RelativeFile([string] $Directory, [string] $Path) {
     return $full
 }
 
+function ConvertFrom-GitHubBase64([string] $Content) {
+    return [Convert]::FromBase64String(($Content -replace '\s', ''))
+}
+
+function Get-PublicCommit([string] $Repo, [string] $Ref) {
+    if ($script:publicCommit) { return & $script:publicCommit $Repo $Ref }
+    $uri = "https://api.github.com/repos/$Repo/commits/$([Uri]::EscapeDataString($Ref))"
+    $response = Invoke-WebRequest -Uri $uri -Headers @{
+        Accept = 'application/vnd.github+json'
+        'User-Agent' = 'xAI-upstream-update'
+        'X-GitHub-Api-Version' = '2022-11-28'
+    } -TimeoutSec 30 -MaximumRetryCount 2
+    return ConvertFrom-Json $response.Content
+}
+
+function Resolve-Revision([string] $Repo, [string] $Ref) {
+    if ($Ref -match '^[a-f0-9]{40}$') { return $Ref }
+    $commit = $null
+    try { $commit = Get-PublicCommit $Repo $Ref }
+    catch {
+        $status = 0
+        $response = $_.Exception.PSObject.Properties['Response']
+        if ($response -and $response.Value) { $status = [int]$response.Value.StatusCode }
+        elseif ($_.Exception.Message -match '\b(401|404)\b') { $status = [int]$Matches[1] }
+        if ($status -notin 401, 404) { throw }
+        $commit = Invoke-GitHub "repos/$Repo/commits/$([Uri]::EscapeDataString($Ref))"
+    }
+    if ($commit.sha -notmatch '^[a-f0-9]{40}$') { throw "Invalid revision for $Repo@$Ref" }
+    return $commit.sha
+}
+
+function Invoke-Unauthenticated([scriptblock] $Action) {
+    $names = @('GH_TOKEN', 'GITHUB_TOKEN', 'GH_ENTERPRISE_TOKEN')
+    $saved = @{}
+    foreach ($name in $names) {
+        $saved[$name] = if (Test-Path "Env:$name") { (Get-Item "Env:$name").Value } else { $null }
+    }
+    $previousConfig = if (Test-Path Env:GH_CONFIG_DIR) { $env:GH_CONFIG_DIR } else { $null }
+    $config = Join-Path ([IO.Path]::GetTempPath()) ("upstream-gh-anon-" + [Guid]::NewGuid())
+    try {
+        foreach ($name in $names) { Remove-Item "Env:$name" -ErrorAction SilentlyContinue }
+        [IO.Directory]::CreateDirectory($config) | Out-Null
+        $env:GH_CONFIG_DIR = $config
+        & $Action
+    }
+    finally {
+        foreach ($name in $names) {
+            if ($null -eq $saved[$name]) { Remove-Item "Env:$name" -ErrorAction SilentlyContinue }
+            else { Set-Item "Env:$name" $saved[$name] }
+        }
+        if ($null -eq $previousConfig) { Remove-Item Env:GH_CONFIG_DIR -ErrorAction SilentlyContinue }
+        else { $env:GH_CONFIG_DIR = $previousConfig }
+        if (Test-Path -LiteralPath $config) { [IO.Directory]::Delete($config, $true) }
+    }
+}
+
 function Get-Revisions($Entries) {
     $revisions = @{}
     foreach ($entry in $Entries | Where-Object { !$_.skip }) {
@@ -105,9 +161,7 @@ function Get-Revisions($Entries) {
         $ref = $Matches[2]
         $key = "$repo@$ref"
         if (!$revisions.ContainsKey($key)) {
-            $commit = Invoke-GitHub "repos/$repo/commits/$([Uri]::EscapeDataString($ref))"
-            if ($commit.sha -notmatch '^[a-f0-9]{40}$') { throw "Invalid revision for $key" }
-            $revisions[$key] = @{ repository = $repo; ref = $ref; sha = $commit.sha }
+            $revisions[$key] = @{ repository = $repo; ref = $ref; sha = (Resolve-Revision $repo $ref) }
         }
     }
     return @($revisions.Values | Sort-Object repository, ref)
@@ -137,7 +191,7 @@ function Invoke-Sync([string] $Directory, $Revisions, [switch] $Assessment) {
     [IO.File]::WriteAllText($path, $projected)
     Push-Location $Directory
     try {
-        $log = Invoke-Tool dnx @('--yes', 'dotnet-file', '--', 'sync')
+        $log = Invoke-Unauthenticated { Invoke-Tool dnx @('--yes', 'dotnet-file', '--', 'sync') }
         if ($log -match '(?m)^\s*[x\u2717\u2718]\s') { throw "dotnet-file reported incomplete synchronization:`n$log" }
         Write-Host $log
     }
@@ -170,7 +224,7 @@ function Invoke-Includes([string] $Directory, $Revisions) {
     $scriptPath = Join-Path ([IO.Path]::GetTempPath()) ("upstream-includes-$([Guid]::NewGuid()).ps1")
     $previous = $env:RESOLVE_VALIDATE
     try {
-        [IO.File]::WriteAllBytes($scriptPath, [Convert]::FromBase64String($file.content))
+        [IO.File]::WriteAllBytes($scriptPath, (ConvertFrom-GitHubBase64 $file.content))
         $env:RESOLVE_VALIDATE = 'true'
         Push-Location $Directory
         try { Write-Host (Invoke-Tool pwsh @('-NoProfile', '-File', $scriptPath)) }
@@ -754,7 +808,7 @@ function Complete-Report($Issue, $Report) {
             else {
                 $path = [Uri]::EscapeDataString($file.path).Replace('%2F', '/')
                 $content = Invoke-GitHub "repos/$Repository/contents/${path}?ref=$($pr.head.sha)"
-                $bytes = [Convert]::FromBase64String($content.content)
+                $bytes = ConvertFrom-GitHubBase64 $content.content
                 $hash = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($bytes)).ToLowerInvariant()
                 if ($hash -ne $file.after) { throw "Committed protocol bytes do not match evidence: $($file.path)" }
             }

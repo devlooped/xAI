@@ -55,7 +55,11 @@ after the replacement is operational, never closed automatically as part of roll
 - Evidence collection pins GitHub revisions in a disposable config projection,
   restores canonical source URLs, normalizes protos, and records file hashes,
   documentation snapshots, stable MEAI versions, and prior assessment links.
-  Missing sources fail collection explicitly. Artifacts are supporting evidence;
+  Public revisions and `dotnet-file` downloads omit the workflow token: an Actions
+  or Copilot credential is rejected by organizations that enforce an IP allow list,
+  including `xai-org`, even for public repositories. Private sources fall back to
+  the caller token only after an anonymous 401 or 404. Missing sources fail
+  collection explicitly. Artifacts are supporting evidence;
   essential inventory and durable state also live in the cycle issue.
   Newly introduced missing proto imports are captured as integration diagnostics,
   not mistaken for a source outage or a successful build; the agent must resolve

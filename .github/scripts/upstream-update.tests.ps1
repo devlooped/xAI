@@ -79,6 +79,7 @@ function Invoke-GitHub($Path, $Method = 'GET', $Body = $null, [switch] $Paginate
 
 function Reset-Fakes {
     $script:Resume = $false
+    $script:publicCommit = $null
     $script:fixture = New-Fixture
     $script:calls = [Collections.Generic.List[object]]::new()
     $script:comments = [Collections.Generic.List[object]]::new()
@@ -349,7 +350,10 @@ try {
         $defaultAPI = $script:api
         $script:api = {
             param($Path, $Method, $Body)
-            if ($Path -match '/contents/') { return @{ content = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes('incorrect bytes')) } }
+            if ($Path -match '/contents/') {
+                $encoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes('incorrect bytes'))
+                return @{ content = ($encoded -replace '(.{4})', "`$1`n") }
+            }
             return & $defaultAPI $Path $Method $Body
         }.GetNewClosure()
         Assert-Throws { Invoke-Result } 'Committed protocol bytes'
@@ -580,6 +584,60 @@ try {
         $f = $script:fixture
         $f.files = @(@{ filename = '.netconfig' }); $f.report.files = @('.netconfig')
         Assert-Throws { Assert-Report $f.report $f.manifest $f.issue $f.pr $f.files } 'metadata-only'
+    }
+    Test-Case 'GitHub content newlines decode to the original bytes' {
+        $payload = 'hello world'
+        $encoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($payload)) -replace '(.{4})', "`$1`n"
+        $decoded = [Text.Encoding]::UTF8.GetString((ConvertFrom-GitHubBase64 $encoded))
+        Assert ($decoded -eq $payload) 'Wrapped GitHub content was not decoded.'
+    }
+    Test-Case 'public revision pinning does not use the workflow token' {
+        $script:publicCommit = { param($Repo, $Ref) @{ sha = 'd' * 40 } }
+        $entries = @(@{ path = 'src/xAI.Protocol/.'; skip = $false
+            url = 'https://github.com/xai-org/xai-proto/tree/main/proto/xai/api/v1/' })
+        $revisions = @(Get-Revisions $entries)
+        Assert ($revisions[0].repository -eq 'xai-org/xai-proto' -and $revisions[0].sha -eq ('d' * 40)) 'Public commit was not pinned.'
+        Assert (@($script:calls | Where-Object { $_.path -match 'xai-org' }).Count -eq 0) 'Pinned a public repo with the workflow token.'
+    }
+    Test-Case 'an already pinned SHA is not requested again' {
+        $script:publicCommit = { throw 'Public lookup should not run.' }
+        $sha = 'a' * 40
+        $entries = @(@{ path = 'file.txt'; skip = $false; url = "https://github.com/xai-org/xai-proto/blob/$sha/file.txt" })
+        $revisions = @(Get-Revisions $entries)
+        Assert ($revisions[0].sha -eq $sha) 'Existing revision was not kept.'
+        Assert ($script:calls.Count -eq 0) 'Resolved a full SHA through the API.'
+    }
+    Test-Case 'IP allow list failures stay anonymous' {
+        $script:publicCommit = { throw 'the xai-org organization has an IP allow list enabled' }
+        $entries = @(@{ path = 'src/xAI.Protocol/.'; skip = $false
+            url = 'https://github.com/xai-org/xai-proto/tree/main/proto/xai/api/v1/' })
+        Assert-Throws { Get-Revisions $entries } 'IP allow list'
+        Assert ($script:calls.Count -eq 0) 'Retried an IP allow list failure with the workflow token.'
+    }
+    Test-Case 'private sources fall back to the caller token after anonymous 404' {
+        $script:publicCommit = { throw 'Response status code does not indicate success: 404 (Not Found).' }
+        $defaultAPI = $script:api
+        $script:api = {
+            param($Path, $Method, $Body)
+            if ($Path -eq 'repos/private/repo/commits/main') { return @{ sha = 'e' * 40 } }
+            return & $defaultAPI $Path $Method $Body
+        }.GetNewClosure()
+        $entries = @(@{ path = 'secret.txt'; skip = $false; url = 'https://github.com/private/repo/blob/main/secret.txt' })
+        $revisions = @(Get-Revisions $entries)
+        Assert ($revisions[0].sha -eq ('e' * 40)) 'Private source was not pinned with the caller token.'
+    }
+    Test-Case 'public file sync hides the workflow token from child processes' {
+        $previous = $env:GH_TOKEN
+        $env:GH_TOKEN = 'workflow-token'
+        $seen = 'unset'
+        $restored = $null
+        try {
+            $seen = Invoke-Unauthenticated { & pwsh -NoProfile -Command "[Environment]::GetEnvironmentVariable('GH_TOKEN')" }
+            $restored = $env:GH_TOKEN
+        }
+        finally { $env:GH_TOKEN = $previous }
+        Assert ([string]::IsNullOrEmpty("$seen")) 'Workflow token was visible during public sync.'
+        Assert ($restored -eq 'workflow-token') 'Workflow token was not restored.'
     }
     Test-Case 'MEAI ignore is version-scoped and privileged checkout is main-only' {
         $dependabot = [IO.File]::ReadAllText((Join-Path $Root '.github/dependabot.yml'))
