@@ -9,6 +9,17 @@ namespace xAI.Tests;
 
 public class SanityChecks(ITestOutputHelper output)
 {
+    [Fact]
+    public void AddxAIProtocolRegistersFilesAndVideoClients()
+    {
+        using var services = new ServiceCollection()
+            .AddxAIProtocol("test-api-key")
+            .BuildServiceProvider();
+
+        Assert.NotNull(services.GetRequiredService<Files.FilesClient>());
+        Assert.NotNull(services.GetRequiredService<Video.VideoClient>());
+    }
+
     [SecretsFact("CI_XAI_API_KEY")]
     public async Task NoEmbeddingModels()
     {

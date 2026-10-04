@@ -10,6 +10,12 @@
 - `ChatOptions` mappings include `Seed`, `StopSequences`, `AllowMultipleToolCalls` → `parallel_tool_calls`, `Reasoning.Effort` → `reasoning_effort`, and `ConversationId` → `previous_response_id`. `GrokChatOptions.StoreMessages` enables stored responses and surfaces `ChatResponse.ConversationId`.
 - `UsageDetails` maps `ReasoningTokenCount` and `CachedInputTokenCount` from xAI usage, plus prompt text/image/source/cost details in `AdditionalCounts`.
 - Web/X search tool calls map to MEAI `WebSearchToolCallContent` / `WebSearchToolResultContent` (queries from tool arguments when present; citation URLs become `UriContent` outputs).
+- The SDK pins stable `Microsoft.Extensions.AI.Abstractions` 10.10.1; its `HostedImageGenerationTool`, `ImageGenerationToolCallContent`, and `ImageGenerationToolResultContent` are used for xAI's chat image-generation tool. The optional xAI `action` is passed through `HostedImageGenerationTool.AdditionalProperties["action"]`.
+- `GrokImageGenerationOptions` maps image quality and Files API storage/public-URL settings to image protocol fields. Per-image MEAI content keeps the generated protocol image as `RawRepresentation` and exposes moderation, file output, and storage errors in `AdditionalProperties`.
+- `GrokChatOptions.SafetyIdentifier` maps to xAI's separate `safety_identifier` request field. Keep it distinct from MEAI's end-user `user` mapping; callers should hash stable user IDs and avoid personal information.
+- MEAI `ReasoningEffort.ExtraHigh` maps to xAI's `EFFORT_XHIGH`. Newly synced Files and Video protocol services are exposed by `GrokClient.GetFilesClient()` / `GetVideoClient()` and `AddxAIProtocol`; no MEAI file/video abstraction is inferred from the protocol.
+- TTS uses MEAI 10.10.1's native `TextToSpeechOptions.Speed`; `GrokTextToSpeechOptions` adds phrase replacement and optional character timestamps, surfaced as response/update additional properties. STT maps key terms, filler words, VAD threshold, and streaming Smart Turn options; arbitrary Opus packetization is not exposed because the current stream contract cannot preserve packet boundaries.
+- xAI's speech-to-speech Realtime/WebRTC/SIP APIs have no matching stable MEAI abstraction or generated protocol surface in this SDK. Treat this as a separately scoped API integration rather than inventing an adapter during protocol/voice maintenance.
 
 ## Comprehensive upstream maintenance
 

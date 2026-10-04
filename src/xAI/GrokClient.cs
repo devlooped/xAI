@@ -50,8 +50,14 @@ public sealed class GrokClient(string apiKey, GrokClientOptions options) : IDisp
     /// <summary>Gets a new instance of <see cref="Image.ImageClient"/> that reuses the client configuration details provided to the <see cref="GrokClient"/> instance.</summary>
     public Image.ImageClient GetImageClient() => new(ChannelHandler, Options);
 
+    /// <summary>Gets a new instance of <see cref="Files.FilesClient"/> that reuses the client configuration details provided to the <see cref="GrokClient"/> instance.</summary>
+    public Files.FilesClient GetFilesClient() => new(ChannelHandler);
+
     /// <summary>Gets a new instance of <see cref="Models.ModelsClient"/> that reuses the client configuration details provided to the <see cref="GrokClient"/> instance.</summary>
     public Models.ModelsClient GetModelsClient() => new(ChannelHandler);
+
+    /// <summary>Gets a new instance of <see cref="Video.VideoClient"/> that reuses the client configuration details provided to the <see cref="GrokClient"/> instance.</summary>
+    public Video.VideoClient GetVideoClient() => new(ChannelHandler);
 
     /// <summary>Gets a new instance of <see cref="Tokenize.TokenizeClient"/> that reuses the client configuration details provided to the <see cref="GrokClient"/> instance.</summary>
     public Tokenize.TokenizeClient GetTokenizeClient() => new(ChannelHandler);

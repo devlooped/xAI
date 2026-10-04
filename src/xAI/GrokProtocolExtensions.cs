@@ -112,6 +112,13 @@ public static partial class GrokProtocolExtensions
             case HostedCodeInterpreterTool:
                 return new Tool { CodeExecution = new() };
 
+            case HostedImageGenerationTool imageGenerationTool:
+                var imageGeneration = new ImageGeneration();
+                if (imageGenerationTool.AdditionalProperties.TryGetValue("action", out var action))
+                    imageGeneration.Action = action as string ?? throw new ArgumentException("The image-generation tool action must be a string.", nameof(tool));
+
+                return new Tool { ImageGeneration = imageGeneration };
+
             case HostedFileSearchTool fileSearch:
                 var collectionTool = new CollectionsSearch();
 
@@ -393,6 +400,16 @@ public static partial class GrokProtocolExtensions
                         Content = { new Content { Text = ConcatTextOutputs(webSearchResult.Outputs) ?? " " } }
                     });
                 }
+                else if (content is ImageGenerationToolResultContent imageGenerationResult &&
+                    imageGenerationResult.RawRepresentation is ToolCall imageGenerationToolCall)
+                {
+                    request.Messages.Add(new Message
+                    {
+                        Role = MessageRole.RoleTool,
+                        ToolCalls = { imageGenerationToolCall },
+                        Content = { new Content { Text = ConcatTextOutputs(imageGenerationResult.Outputs) ?? " " } }
+                    });
+                }
             }
 
             if (gmsg.Content.Count == 0 && gmsg.ToolCalls.Count == 0)
@@ -404,6 +421,8 @@ public static partial class GrokProtocolExtensions
         if (options is GrokChatOptions grokOptions)
         {
             request.Include.AddRange(grokOptions.Include);
+            if (grokOptions.SafetyIdentifier is { } safetyIdentifier)
+                request.SafetyIdentifier = safetyIdentifier;
 
             if (grokOptions.Search.HasFlag(GrokSearch.X))
             {
@@ -469,6 +488,21 @@ public static partial class GrokProtocolExtensions
                         Annotations = annotations,
                         RawRepresentation = toolCall,
                     };
+                    break;
+
+                case ToolCallType.ImageGenerationTool:
+                    yield return new ImageGenerationToolCallContent(toolCall.Id)
+                    {
+                        Annotations = annotations,
+                        RawRepresentation = toolCall,
+                    };
+                    if (content is not null || !string.IsNullOrEmpty(toolCall.ErrorMessage))
+                        yield return new ImageGenerationToolResultContent(toolCall.Id)
+                        {
+                            Annotations = annotations,
+                            RawRepresentation = toolCall,
+                            Outputs = [new TextContent(content ?? toolCall.ErrorMessage!)],
+                        };
                     break;
 
                 case ToolCallType.WebSearchTool:
@@ -706,8 +740,7 @@ public static partial class GrokProtocolExtensions
         Microsoft.Extensions.AI.ReasoningEffort.Low => Protocol.ReasoningEffort.EffortLow,
         Microsoft.Extensions.AI.ReasoningEffort.Medium => Protocol.ReasoningEffort.EffortMedium,
         Microsoft.Extensions.AI.ReasoningEffort.High => Protocol.ReasoningEffort.EffortHigh,
-        // xAI does not expose an extra-high tier; map to the strongest available effort.
-        Microsoft.Extensions.AI.ReasoningEffort.ExtraHigh => Protocol.ReasoningEffort.EffortHigh,
+        Microsoft.Extensions.AI.ReasoningEffort.ExtraHigh => Protocol.ReasoningEffort.EffortXhigh,
         _ => Protocol.ReasoningEffort.InvalidEffort,
     };
 

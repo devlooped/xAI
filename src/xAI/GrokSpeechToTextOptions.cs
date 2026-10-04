@@ -25,8 +25,13 @@ public class GrokSpeechToTextOptions : SpeechToTextOptions
         Multichannel = other.Multichannel;
         Channels = other.Channels;
         Diarize = other.Diarize;
+        KeyTerms = other.KeyTerms is null ? null : [.. other.KeyTerms];
+        FillerWords = other.FillerWords;
+        VadThreshold = other.VadThreshold;
         InterimResults = other.InterimResults;
         Endpointing = other.Endpointing;
+        SmartTurn = other.SmartTurn;
+        SmartTurnTimeout = other.SmartTurnTimeout;
     }
 
     /// <summary>Gets or sets a value indicating whether xAI should apply inverse text normalization to the transcript.</summary>
@@ -44,11 +49,26 @@ public class GrokSpeechToTextOptions : SpeechToTextOptions
     /// <summary>Gets or sets a value indicating whether xAI should include speaker diarization data.</summary>
     public bool? Diarize { get; set; }
 
+    /// <summary>Gets or sets key terms that bias xAI transcription toward product names and other proper nouns.</summary>
+    public IList<string>? KeyTerms { get; set; }
+
+    /// <summary>Gets or sets a value indicating whether filler words should be included in transcripts.</summary>
+    public bool? FillerWords { get; set; }
+
+    /// <summary>Gets or sets the xAI voice-activity threshold, from 0.0 to 1.0.</summary>
+    public double? VadThreshold { get; set; }
+
     /// <summary>Gets or sets a value indicating whether xAI streaming should emit interim partial transcripts.</summary>
     public bool? InterimResults { get; set; }
 
     /// <summary>Gets or sets the silence duration in milliseconds before xAI emits an utterance-final event.</summary>
     public int? Endpointing { get; set; }
+
+    /// <summary>Gets or sets the Smart Turn confidence threshold for streaming transcription.</summary>
+    public double? SmartTurn { get; set; }
+
+    /// <summary>Gets or sets the maximum silence duration before Smart Turn forces an utterance-final event.</summary>
+    public int? SmartTurnTimeout { get; set; }
 
     /// <inheritdoc />
     public override SpeechToTextOptions Clone() => new GrokSpeechToTextOptions(this);

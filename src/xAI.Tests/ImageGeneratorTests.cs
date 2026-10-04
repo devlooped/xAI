@@ -310,6 +310,61 @@ public class ImageGeneratorTests(ITestOutputHelper output)
     }
 
     [Fact]
+    public async Task GenerateImage_WithQualityAndStorage_MapsRequestAndResponseMetadata()
+    {
+        GenerateImageRequest? capturedRequest = null;
+        var client = new Mock<Image.ImageClient>(MockBehavior.Strict);
+        client.Setup(x => x.GenerateImageAsync(It.IsAny<GenerateImageRequest>(), null, null, CancellationToken.None))
+            .Callback<GenerateImageRequest, Metadata?, DateTime?, CancellationToken>((req, _, _, _) => capturedRequest = req)
+            .Returns(CallHelpers.CreateAsyncUnaryCall(new ImageResponse
+            {
+                Images =
+                {
+                    new GeneratedImage
+                    {
+                        Url = "https://example.com/generated.jpg",
+                        RespectModeration = true,
+                        FileOutput = new FileOutput
+                        {
+                            FileId = "file_123",
+                            Filename = "generated.jpg",
+                            PublicUrl = "https://files-cdn.x.ai/file_123",
+                        },
+                    }
+                }
+            }));
+
+        var imageGenerator = client.Object.AsIImageGenerator("grok-imagine-image");
+        var response = await imageGenerator.GenerateAsync(
+            new ImageGenerationRequest("Stored output"),
+            new GrokImageGenerationOptions
+            {
+                Quality = ImageQuality.ImgQualityHigh,
+                Storage = new GrokImageStorageOptions
+                {
+                    Filename = "generated.jpg",
+                    ExpiresAfterSeconds = 3600,
+                    CreatePublicUrl = true,
+                    PublicUrlExpiresAfterSeconds = 1800,
+                },
+            });
+
+        Assert.NotNull(capturedRequest);
+        Assert.True(capturedRequest.HasQuality);
+        Assert.Equal(ImageQuality.ImgQualityHigh, capturedRequest.Quality);
+        Assert.Equal("generated.jpg", capturedRequest.StorageOptions.Filename);
+        Assert.Equal(3600, capturedRequest.StorageOptions.ExpiresAfter);
+        Assert.True(capturedRequest.StorageOptions.PublicUrl.HasExpiresAfter);
+        Assert.Equal(1800, capturedRequest.StorageOptions.PublicUrl.ExpiresAfter);
+
+        var content = Assert.IsType<UriContent>(Assert.Single(response.Contents));
+        Assert.True(Assert.IsType<bool>(content.AdditionalProperties?["respect_moderation"]));
+        var fileOutput = Assert.IsType<FileOutput>(content.AdditionalProperties?["file_output"]);
+        Assert.Equal("file_123", fileOutput.FileId);
+        Assert.Same(content.RawRepresentation, response.RawRepresentation is ImageResponse raw ? raw.Images[0] : null);
+    }
+
+    [Fact]
     public async Task GenerateImage_MapsProtocolUsageToResponseUsage()
     {
         var client = new Mock<Image.ImageClient>(MockBehavior.Strict);

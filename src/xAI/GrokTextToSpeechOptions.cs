@@ -25,6 +25,8 @@ public class GrokTextToSpeechOptions : TextToSpeechOptions
         BitRate = other.BitRate;
         OptimizeStreamingLatency = other.OptimizeStreamingLatency;
         TextNormalization = other.TextNormalization;
+        WithTimestamps = other.WithTimestamps;
+        Replace = other.Replace is null ? null : new(other.Replace);
     }
 
     /// <summary>Gets or sets the output sample rate in Hz.</summary>
@@ -38,6 +40,12 @@ public class GrokTextToSpeechOptions : TextToSpeechOptions
 
     /// <summary>Gets or sets a value indicating whether xAI should normalize written-form text before synthesis.</summary>
     public bool? TextNormalization { get; set; }
+
+    /// <summary>Gets or sets a value indicating whether to return character-level audio timestamps.</summary>
+    public bool? WithTimestamps { get; set; }
+
+    /// <summary>Gets or sets substitutions applied to phrases before speech synthesis.</summary>
+    public Dictionary<string, string>? Replace { get; set; }
 
     /// <inheritdoc />
     public override TextToSpeechOptions Clone() => new GrokTextToSpeechOptions(this);

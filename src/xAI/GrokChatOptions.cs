@@ -37,4 +37,11 @@ public class GrokChatOptions : ChatOptions
     /// <see cref="ChatOptions.ConversationId"/> / <c>previous_response_id</c>.
     /// </summary>
     public bool StoreMessages { get; set; }
+
+    /// <summary>
+    /// A stable, non-sensitive identifier for the end user, used by xAI to attribute
+    /// usage-policy violations. Hash an internal user identifier; do not provide
+    /// names, email addresses, or other personal information.
+    /// </summary>
+    public string? SafetyIdentifier { get; set; }
 }

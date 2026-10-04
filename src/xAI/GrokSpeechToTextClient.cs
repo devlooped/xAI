@@ -197,6 +197,16 @@ partial class GrokSpeechToTextClient : ISpeechToTextClient
         if (grokOptions?.Diarize is bool diarize)
             content.Add(new StringContent(diarize ? "true" : "false"), "diarize");
 
+        if (grokOptions?.KeyTerms is { } keyTerms)
+            foreach (var keyTerm in keyTerms)
+                content.Add(new StringContent(keyTerm), "keyterm");
+
+        if (grokOptions?.FillerWords is bool fillerWords)
+            content.Add(new StringContent(fillerWords ? "true" : "false"), "filler_words");
+
+        if (grokOptions?.VadThreshold is double vadThreshold)
+            content.Add(new StringContent(vadThreshold.ToString(CultureInfo.InvariantCulture)), "vad_threshold");
+
         var filename = GetFilename(audioSpeechStream);
         var streamContent = new StreamContent(audioSpeechStream);
         streamContent.Headers.ContentType = new MediaTypeHeaderValue(GetMediaType(filename));
@@ -221,6 +231,22 @@ partial class GrokSpeechToTextClient : ISpeechToTextClient
 
         if (grokOptions?.Endpointing is int endpointing)
             query["endpointing"] = endpointing.ToString(CultureInfo.InvariantCulture);
+
+        if (grokOptions?.KeyTerms is { } keyTerms)
+            foreach (var keyTerm in keyTerms)
+                query.Add("keyterm", keyTerm);
+
+        if (grokOptions?.FillerWords is bool fillerWords)
+            query["filler_words"] = fillerWords ? "true" : "false";
+
+        if (grokOptions?.VadThreshold is double vadThreshold)
+            query["vad_threshold"] = vadThreshold.ToString(CultureInfo.InvariantCulture);
+
+        if (grokOptions?.SmartTurn is double smartTurn)
+            query["smart_turn"] = smartTurn.ToString(CultureInfo.InvariantCulture);
+
+        if (grokOptions?.SmartTurnTimeout is int smartTurnTimeout)
+            query["smart_turn_timeout"] = smartTurnTimeout.ToString(CultureInfo.InvariantCulture);
 
         if (GetLanguage(options) is { } language)
             query["language"] = language;
@@ -302,6 +328,7 @@ partial class GrokSpeechToTextClient : ISpeechToTextClient
         AddProperty(ref properties, "is_final", GetBoolean(root, "is_final"));
         AddProperty(ref properties, "speech_final", GetBoolean(root, "speech_final"));
         AddProperty(ref properties, "duration", TryGetDouble(root, "duration"));
+        AddProperty(ref properties, "end_of_turn_confidence", TryGetDouble(root, "end_of_turn_confidence"));
 
         return properties;
     }
@@ -368,16 +395,16 @@ partial class GrokSpeechToTextClient : ISpeechToTextClient
 
         foreach (string key in query)
         {
-            if (query[key] is not { } value)
-                continue;
+            foreach (var value in query.GetValues(key) ?? [])
+            {
+                if (builder.Length > 0)
+                    builder.Append('&');
 
-            if (builder.Length > 0)
-                builder.Append('&');
-
-            builder
-                .Append(Uri.EscapeDataString(key))
-                .Append('=')
-                .Append(Uri.EscapeDataString(value));
+                builder
+                    .Append(Uri.EscapeDataString(key))
+                    .Append('=')
+                    .Append(Uri.EscapeDataString(value));
+            }
         }
 
         return builder.ToString();

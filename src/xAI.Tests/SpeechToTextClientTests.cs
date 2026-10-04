@@ -56,6 +56,9 @@ public class SpeechToTextClientTests
                 Multichannel = true,
                 Channels = 2,
                 Diarize = true,
+                KeyTerms = ["xAI", "Grok Voice"],
+                FillerWords = true,
+                VadThreshold = 0.25,
                 ModelId = "test-model",
             });
 
@@ -65,7 +68,7 @@ public class SpeechToTextClientTests
         Assert.Equal("test-api-key", handler.Request.Headers.Authorization?.Parameter);
 
         var body = handler.RequestBody!;
-        AssertFieldOrder(body, "format", "language", "sample_rate", "audio_format", "multichannel", "channels", "diarize", "file");
+        AssertFieldOrder(body, "format", "language", "sample_rate", "audio_format", "multichannel", "channels", "diarize", "keyterm", "filler_words", "vad_threshold", "file");
         Assert.Contains("format", GetField(body, "format"));
         Assert.Contains("true", body);
         Assert.Contains("language", GetField(body, "language"));
@@ -75,6 +78,13 @@ public class SpeechToTextClientTests
         Assert.Contains("audio_format", GetField(body, "audio_format"));
         Assert.Contains("pcm", body);
         Assert.Contains("audio.mp3", body);
+        Assert.Equal(2,
+            body.Split("name=\"keyterm\"", StringSplitOptions.None).Length - 1 +
+            body.Split("name=keyterm", StringSplitOptions.None).Length - 1);
+        Assert.Contains("xAI", body);
+        Assert.Contains("Grok Voice", body);
+        Assert.Contains("filler_words", GetField(body, "filler_words"));
+        Assert.Contains("vad_threshold", GetField(body, "vad_threshold"));
 
         Assert.Equal("Hello world", response.Text);
         Assert.Null(response.ModelId);
@@ -141,7 +151,7 @@ public class SpeechToTextClientTests
         var webSocket = new FakeWebSocket(
             """{"type":"transcript.created"}""",
             """{"type":"transcript.partial","text":"Hel","is_final":false,"speech_final":false,"start":0.0,"duration":0.4}""",
-            """{"type":"transcript.partial","text":"Hello","is_final":true,"speech_final":true,"start":0.0,"duration":0.8,"channel_index":1}""",
+            """{"type":"transcript.partial","text":"Hello","is_final":true,"speech_final":true,"start":0.0,"duration":0.8,"channel_index":1,"end_of_turn_confidence":0.8}""",
             """{"type":"transcript.done","text":"Hello world","duration":1.2}""");
 
         Uri? capturedUri = null;
@@ -169,6 +179,11 @@ public class SpeechToTextClientTests
                 Diarize = true,
                 Multichannel = true,
                 Channels = 2,
+                KeyTerms = ["xAI", "Grok voice"],
+                FillerWords = true,
+                VadThreshold = 0.25,
+                SmartTurn = 0.7,
+                SmartTurnTimeout = 1200,
                 ModelId = "ignored-model",
             }))
         {
@@ -176,7 +191,7 @@ public class SpeechToTextClientTests
         }
 
         Assert.Equal("test-api-key", capturedApiKey);
-        Assert.Equal("wss://streaming.test/base/v1/stt?sample_rate=8000&encoding=mulaw&interim_results=true&endpointing=5&language=en&diarize=true&multichannel=true&channels=2", capturedUri!.ToString());
+        Assert.Equal("wss://streaming.test/base/v1/stt?sample_rate=8000&encoding=mulaw&interim_results=true&endpointing=5&keyterm=xAI&keyterm=Grok%20voice&filler_words=true&vad_threshold=0.25&smart_turn=0.7&smart_turn_timeout=1200&language=en&diarize=true&multichannel=true&channels=2", capturedUri!.AbsoluteUri);
 
         Assert.Collection(webSocket.SentBinaryMessages,
             message => Assert.Equal(new byte[] { 1, 2, 3, 4 }, message));
@@ -208,6 +223,7 @@ public class SpeechToTextClientTests
                 Assert.Null(update.ModelId);
                 Assert.Equal("Hello", update.Text);
                 Assert.Equal(1, update.AdditionalProperties?["channel_index"]);
+                Assert.Equal(0.8, update.AdditionalProperties?["end_of_turn_confidence"]);
             },
             update =>
             {
@@ -220,6 +236,7 @@ public class SpeechToTextClientTests
                 Assert.Equal(SpeechToTextResponseUpdateKind.SessionClose, update.Kind);
                 Assert.Null(update.ModelId);
             });
+
     }
 
     [Fact]
