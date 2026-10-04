@@ -128,29 +128,41 @@ function Resolve-Revision([string] $Repo, [string] $Ref) {
     return $commit.sha
 }
 
-function Invoke-Unauthenticated([scriptblock] $Action) {
-    $names = @('GH_TOKEN', 'GITHUB_TOKEN', 'GH_ENTERPRISE_TOKEN')
-    $saved = @{}
-    foreach ($name in $names) {
-        $saved[$name] = if (Test-Path "Env:$name") { (Get-Item "Env:$name").Value } else { $null }
-    }
-    $previousConfig = if (Test-Path Env:GH_CONFIG_DIR) { $env:GH_CONFIG_DIR } else { $null }
-    $config = Join-Path ([IO.Path]::GetTempPath()) ("upstream-gh-anon-" + [Guid]::NewGuid())
-    try {
-        foreach ($name in $names) { Remove-Item "Env:$name" -ErrorAction SilentlyContinue }
-        [IO.Directory]::CreateDirectory($config) | Out-Null
-        $env:GH_CONFIG_DIR = $config
-        & $Action
-    }
-    finally {
-        foreach ($name in $names) {
-            if ($null -eq $saved[$name]) { Remove-Item "Env:$name" -ErrorAction SilentlyContinue }
-            else { Set-Item "Env:$name" $saved[$name] }
-        }
-        if ($null -eq $previousConfig) { Remove-Item Env:GH_CONFIG_DIR -ErrorAction SilentlyContinue }
-        else { $env:GH_CONFIG_DIR = $previousConfig }
-        if (Test-Path -LiteralPath $config) { [IO.Directory]::Delete($config, $true) }
-    }
+function Get-GitHubShimScript([string] $RealGh) {
+    $real = $RealGh.Replace("'", "'\''")
+    return @"
+#!/bin/bash
+if [[ "`${1:-}" == "api" ]]; then
+  url=""
+  for arg in "`$@"; do
+    case "`$arg" in
+      http://*|https://*|repos/*) url="`$arg" ;;
+    esac
+  done
+  if [[ "`$url" == *xai-org/* ]]; then
+    if [[ "`$url" != http* ]]; then
+      url="https://api.github.com/`$url"
+    fi
+    exec curl -fsSL \
+      -H "Accept: application/vnd.github+json" \
+      -H "User-Agent: xAI-upstream-update" \
+      -H "X-GitHub-Api-Version: 2022-11-28" \
+      "`$url"
+  fi
+fi
+exec '$real' "`$@"
+"@
+}
+
+function Install-GitHubShim {
+    $dir = Join-Path ([IO.Path]::GetTempPath()) ("upstream-gh-" + [Guid]::NewGuid())
+    [IO.Directory]::CreateDirectory($dir) | Out-Null
+    $real = @(Get-Command gh -CommandType Application -ErrorAction SilentlyContinue)[0]
+    if (!$real) { throw 'gh is required to synchronize GitHub directories.' }
+    $path = Join-Path $dir 'gh'
+    [IO.File]::WriteAllText($path, ((Get-GitHubShimScript $real.Source) -replace "`r`n", "`n"))
+    if (Get-Command chmod -ErrorAction SilentlyContinue) { & chmod +x $path }
+    return $dir
 }
 
 function Get-Revisions($Entries) {
@@ -192,12 +204,18 @@ function Invoke-Sync([string] $Directory, $Revisions, [switch] $Assessment) {
     $projected = Set-Projection $canonical $Revisions
     [IO.File]::WriteAllText($path, $projected)
     Push-Location $Directory
+    $shim = $null
+    $previousPath = $env:PATH
     try {
-        $log = Invoke-Unauthenticated { Invoke-Tool dnx @('--yes', 'dotnet-file', '--', 'sync') }
+        $shim = Install-GitHubShim
+        $env:PATH = $shim + [IO.Path]::PathSeparator + $previousPath
+        $log = Invoke-Tool dnx @('--yes', 'dotnet-file', '--', 'sync')
         if ($log -match '(?m)^\s*[x\u2717\u2718]\s') { throw "dotnet-file reported incomplete synchronization:`n$log" }
         Write-Host $log
     }
     finally {
+        $env:PATH = $previousPath
+        if ($shim -and (Test-Path -LiteralPath $shim)) { [IO.Directory]::Delete($shim, $true) }
         Pop-Location
         $current = [IO.File]::ReadAllText($path)
         [IO.File]::WriteAllText($path, (Set-Projection $current $Revisions -Restore))

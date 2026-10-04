@@ -55,10 +55,12 @@ after the replacement is operational, never closed automatically as part of roll
 - Evidence collection pins GitHub revisions in a disposable config projection,
   restores canonical source URLs, normalizes protos, and records file hashes,
   documentation snapshots, stable MEAI versions, and prior assessment links.
-  Public revisions and `dotnet-file` downloads omit the workflow token: an Actions
-  or Copilot credential is rejected by organizations that enforce an IP allow list,
-  including `xai-org`, even for public repositories. Private sources fall back to
-  the caller token only after an anonymous 401 or 404. Missing sources fail
+  Public revisions are pinned without the workflow token. `xai-org` directory
+  listings go through an unauthenticated `curl` shim because that organization
+  rejects an Actions or Copilot credential via its IP allow list, while `gh`
+  itself refuses anonymous calls. Other `dotnet-file` sources keep the workflow
+  token. Private commit lookups fall back to that token only after an anonymous
+  401 or 404. Missing sources fail
   collection explicitly. Artifacts are supporting evidence;
   essential inventory and durable state also live in the cycle issue.
   Newly introduced missing proto imports are captured as integration diagnostics,

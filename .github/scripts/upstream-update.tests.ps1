@@ -641,18 +641,31 @@ try {
         $revisions = @(Get-Revisions $entries)
         Assert ($revisions[0].sha -eq ('e' * 40)) 'Private source was not pinned with the caller token.'
     }
-    Test-Case 'public file sync hides the workflow token from child processes' {
-        $previous = $env:GH_TOKEN
-        $env:GH_TOKEN = 'workflow-token'
-        $seen = 'unset'
-        $restored = $null
+    Test-Case 'xai-org directory reads bypass gh authentication' {
+        $text = Get-GitHubShimScript '/usr/bin/gh'
+        Assert ($text.Contains('xai-org/') -and $text.Contains('curl -fsSL') -and $text.Contains("exec '/usr/bin/gh'")) 'Shim does not anonymize xai-org.'
+        if (!$IsLinux) { return }
+        $root = Join-Path $script:temporary 'shim'
+        $bin = Join-Path $root 'bin'
+        $fake = Join-Path $root 'real'
+        foreach ($directory in @($bin, $fake)) { [IO.Directory]::CreateDirectory($directory) | Out-Null }
+        [IO.File]::WriteAllText((Join-Path $bin 'curl'), "#!/bin/bash`nprintf '%s\n' `"`$1`" > '$root/curl-url'`nprintf '%s' '[{`"type`":`"file`"}]'`n")
+        [IO.File]::WriteAllText((Join-Path $fake 'gh'), "#!/bin/bash`nprintf '%s\n' `"`$*`"`n")
+        & chmod +x (Join-Path $bin 'curl') (Join-Path $fake 'gh')
+        $shim = Join-Path $root 'shim'
+        [IO.Directory]::CreateDirectory($shim) | Out-Null
+        [IO.File]::WriteAllText((Join-Path $shim 'gh'), ((Get-GitHubShimScript (Join-Path $fake 'gh')) -replace "`r`n", "`n"))
+        & chmod +x (Join-Path $shim 'gh')
+        $previousPath = $env:PATH
         try {
-            $seen = Invoke-Unauthenticated { & pwsh -NoProfile -Command "[Environment]::GetEnvironmentVariable('GH_TOKEN')" }
-            $restored = $env:GH_TOKEN
+            $env:PATH = "$bin$([IO.Path]::PathSeparator)$shim$([IO.Path]::PathSeparator)$previousPath"
+            $public = & (Join-Path $shim 'gh') api 'https://api.github.com/repos/xai-org/xai-proto/contents/proto?ref=main'
+            $private = & (Join-Path $shim 'gh') api 'https://api.github.com/repos/devlooped/oss/contents'
         }
-        finally { $env:GH_TOKEN = $previous }
-        Assert ([string]::IsNullOrEmpty("$seen")) 'Workflow token was visible during public sync.'
-        Assert ($restored -eq 'workflow-token') 'Workflow token was not restored.'
+        finally { $env:PATH = $previousPath }
+        Assert ($public -eq '[{"type":"file"}]') 'xai-org listing did not use curl.'
+        Assert ((Get-Content (Join-Path $root 'curl-url') -Raw).Contains('xai-org/xai-proto')) 'curl missed the xai-org URL.'
+        Assert ($private.Contains('devlooped/oss')) 'Other repositories were not forwarded to gh.'
     }
     Test-Case 'MEAI ignore is version-scoped and privileged checkout is main-only' {
         $dependabot = [IO.File]::ReadAllText((Join-Path $Root '.github/dependabot.yml'))
