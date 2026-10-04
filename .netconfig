@@ -30,21 +30,25 @@
 	weak
 [file ".github/dependabot.yml"]
 	url = https://github.com/devlooped/oss/blob/main/.github/dependabot.yml
+	skip
 	sha = e733294084fb3e75d517a2e961e87df8faae7dc6
 	etag = a1aaba1440e5ee2a7b7f93fc0fb004d4e1d4d9780350c753f7c429e37241345a
 	weak
 [file ".github/release.yml"]
 	url = https://github.com/devlooped/oss/blob/main/.github/release.yml
+	skip
 	sha = 0c23e24704625cf75b2cb1fdc566cef7e20af313
 	etag = 310df162242c95ed19ed12e3c96a65f77e558b46dced676ad5255eb12caafe75
 	weak
 [file ".github/workflows/build.yml"]
 	url = https://github.com/devlooped/oss/blob/main/.github/workflows/build.yml
+	skip
 	sha = 5da103cfbc1c4f9b5f59cfa698d2afbd744a7525
 	etag = 851af098748f7cfa5bc3cfd4cc404a6de930532b59ceb2b3b535282c41226f3a
 	weak
 [file ".github/workflows/changelog.config"]
 	url = https://github.com/devlooped/oss/blob/main/.github/workflows/changelog.config
+	skip
 	sha = 08d83cb510732f861416760d37702f9f55bd7f9e
 	etag = 556a28914eeeae78ca924b1105726cdaa211af365671831887aec81f5f4301b4
 	weak
@@ -60,6 +64,7 @@
 	weak
 [file ".github/workflows/dotnet-file.yml"]
 	url = https://github.com/devlooped/oss/blob/main/.github/workflows/dotnet-file.yml
+	skip
 	sha = 8fa147d4799d73819040736c399d0b1db2c2d86c
 	etag = 1ca805a23656e99c03f9d478dba8ccef6e571f5de2ac0e9bb7e3c5216c99a694
 	weak

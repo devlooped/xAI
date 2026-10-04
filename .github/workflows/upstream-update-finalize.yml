@@ -1,0 +1,42 @@
+name: Finalize upstream SDK update
+on:
+  issue_comment:
+    types: [created]
+  pull_request_target:
+    types: [closed]
+  workflow_dispatch:
+    inputs:
+      issue:
+        description: Cycle issue to reconcile after an interrupted session
+        type: number
+        required: true
+
+concurrency:
+  group: upstream-sdk-update
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  finalize:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'issue_comment' && startsWith(github.event.comment.body, '## Upstream update result')) ||
+      (github.event_name == 'pull_request_target' && contains(github.event.pull_request.labels.*.name, 'upstream-update'))
+    runs-on: ubuntu-latest
+    steps:
+      # Never check out or execute code from the PR head in this privileged handler.
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+          sparse-checkout: .github/scripts
+          sparse-checkout-cone-mode: false
+
+      - name: Reconcile trusted cycle metadata
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.UPSTREAM_UPDATE_TOKEN }}
+          CYCLE_ISSUE: ${{ inputs.issue }}
+        run: .github/scripts/upstream-update.ps1 -Mode Finalize -EventPath $env:GITHUB_EVENT_PATH

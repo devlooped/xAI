@@ -7,6 +7,13 @@ updates:
   directory: /
   schedule:
     interval: daily
+  # Suppress routine MEAI bumps, not vulnerability remediation.
+  ignore:
+    - dependency-name: "Microsoft.Extensions.AI*"
+      update-types:
+        - version-update:semver-major
+        - version-update:semver-minor
+        - version-update:semver-patch
   groups:
     Azure:
       patterns:
@@ -25,9 +32,6 @@ updates:
       patterns:
         - "Microsoft.Extensions*"
       exclude-patterns:
-        - "Microsoft.Extensions.AI*"
-    ExtensionsAI:
-      patterns:
         - "Microsoft.Extensions.AI*"
     Web:
       patterns:
