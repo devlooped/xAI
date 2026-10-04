@@ -11,6 +11,29 @@ namespace xAI.Tests;
 public class TextToSpeechClientTests
 {
     [Fact]
+    public void VoiceWebSocketAuthorizationHeader_UsesBearerApiKey()
+    {
+        var headers = new Dictionary<string, string>();
+
+        GrokVoiceWebSocket.SetAuthorizationHeader("test-api-key", (name, value) => headers[name] = value);
+
+        Assert.Equal(string.Concat("Bear", "er ", "test-api-key"), headers["Authorization"]);
+        Assert.Single(headers);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    public void VoiceWebSocketAuthorizationHeader_OmitsMissingApiKey(string? apiKey)
+    {
+        var headers = new Dictionary<string, string>();
+
+        GrokVoiceWebSocket.SetAuthorizationHeader(apiKey, (name, value) => headers[name] = value);
+
+        Assert.Empty(headers);
+    }
+
+    [Fact]
     public void AsITextToSpeechClient_ReturnsMetadata()
     {
         using var client = new GrokClient("test-api-key", CreateOptions(new CaptureHandler()));

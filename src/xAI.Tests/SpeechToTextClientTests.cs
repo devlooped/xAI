@@ -151,6 +151,7 @@ public class SpeechToTextClientTests
         var webSocket = new FakeWebSocket(
             """{"type":"transcript.created"}""",
             """{"type":"transcript.partial","text":"Hel","is_final":false,"speech_final":false,"start":0.0,"duration":0.4}""",
+            """{"type":"transcript.partial","text":"Hello","is_final":false,"speech_final":false,"start":0.0,"duration":0.6}""",
             """{"type":"transcript.partial","text":"Hello","is_final":true,"speech_final":true,"start":0.0,"duration":0.8,"channel_index":1,"end_of_turn_confidence":0.8}""",
             """{"type":"transcript.done","channel_index":0,"duration":1.2}""",
             """{"type":"transcript.done","text":"Hello world","duration":1.2,"channel_index":1}""");
@@ -221,6 +222,13 @@ public class SpeechToTextClientTests
             },
             update =>
             {
+                Assert.Equal(SpeechToTextResponseUpdateKind.TextUpdating, update.Kind);
+                Assert.Null(update.ModelId);
+                Assert.Equal("", update.Text);
+                Assert.Equal("Hello", update.AdditionalProperties?["partial_text"]);
+            },
+            update =>
+            {
                 Assert.Equal(SpeechToTextResponseUpdateKind.TextUpdated, update.Kind);
                 Assert.Null(update.ModelId);
                 Assert.Equal("Hello", update.Text);
@@ -264,6 +272,28 @@ public class SpeechToTextClientTests
 
         Assert.Contains(updates, update => update.Kind == SpeechToTextResponseUpdateKind.Error && update.Text == "bad audio");
         Assert.DoesNotContain(updates, update => update.Kind == SpeechToTextResponseUpdateKind.SessionClose);
+        Assert.Equal(2, webSocket.ReceiveCount);
+    }
+
+    [Fact]
+    public async Task GetStreamingTextAsync_WhenSocketClosesBeforeTranscriptDone_Throws()
+    {
+        var webSocket = new FakeWebSocket("""{"type":"transcript.created"}""");
+
+        using var stt = new GrokSpeechToTextClient(
+            new HttpClient(new CaptureHandler()),
+            new Uri("https://streaming.test/"),
+            "test-api-key",
+            (_, _, _) => ValueTask.FromResult<WebSocket>(webSocket));
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+        {
+            await foreach (var _ in stt.GetStreamingTextAsync(new MemoryStream([1])))
+            {
+            }
+        });
+
+        Assert.Contains("closed before transcript.done", error.Message);
         Assert.Equal(2, webSocket.ReceiveCount);
     }
 

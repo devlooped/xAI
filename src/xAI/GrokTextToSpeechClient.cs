@@ -304,8 +304,7 @@ partial class GrokTextToSpeechClient : ITextToSpeechClient
     {
         var webSocket = new ClientWebSocket();
 
-        if (!string.IsNullOrEmpty(apiKey))
-            webSocket.Options.SetRequestHeader("Authorization", $"Bearer {apiKey}");
+        GrokVoiceWebSocket.SetAuthorizationHeader(apiKey, webSocket.Options.SetRequestHeader);
 
         await webSocket.ConnectAsync(uri, cancellationToken).ConfigureAwait(false);
         return webSocket;
