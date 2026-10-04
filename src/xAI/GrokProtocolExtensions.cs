@@ -481,7 +481,7 @@ public static partial class GrokProtocolExtensions
                     yield return new FunctionCallContent(
                         toolCall.Id,
                         toolCall.Function.Name,
-                        !string.IsNullOrEmpty(toolCall.Function.Arguments)
+                        !toolCall.HasIndex && !string.IsNullOrEmpty(toolCall.Function.Arguments)
                             ? JsonSerializer.Deserialize<IDictionary<string, object?>>(toolCall.Function.Arguments)
                             : null)
                     {

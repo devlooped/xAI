@@ -220,6 +220,40 @@ public class GrokConversionTests
     }
 
     [Fact]
+    public void AsContents_InProgressFunctionCall_PreservesRawFragmentWithoutParsingPartialJson()
+    {
+        var toolCall = new ToolCall
+        {
+            Id = "call_1",
+            Type = ToolCallType.ClientSideTool,
+            Index = 0,
+            Function = new FunctionCall
+            {
+                Name = "lookup_weather",
+                Arguments = """{"city":""",
+            },
+        };
+
+        var content = Assert.IsType<FunctionCallContent>(Assert.Single(new[] { toolCall }.AsContents()));
+
+        Assert.Equal("call_1", content.CallId);
+        Assert.Equal("lookup_weather", content.Name);
+        Assert.Null(content.Arguments);
+        Assert.Same(toolCall, content.RawRepresentation);
+    }
+
+    [Fact]
+    public void AsCompletionsRequest_ToolCallStreamingInclude_IsPassedThrough()
+    {
+        var request = CreateClient().AsCompletionsRequest([], new GrokChatOptions
+        {
+            Include = { IncludeOption.ToolCallStreaming },
+        });
+
+        Assert.Contains(IncludeOption.ToolCallStreaming, request.Include);
+    }
+
+    [Fact]
     public void AsTool_WithCodeExecution()
     {
         var codeTool = new HostedCodeInterpreterTool();

@@ -358,6 +358,12 @@ var options = new GrokChatOptions
 
 Learn more about [Remote MCP tools](https://docs.x.ai/docs/guides/tools/remote-mcp-tools).
 
+For experimental incremental client-side tool calls, add
+`xAI.Protocol.IncludeOption.ToolCallStreaming` to `GrokChatOptions.Include`.
+Intermediate updates expose each raw fragment (including its call index);
+completed updates contain the full function name and arguments. xAI currently
+documents this mode as unsupported with server-side tools.
+
 For abuse attribution, set `SafetyIdentifier` to a stable hashed identifier
 instead of sending an email address, name, or other personal information:
 
