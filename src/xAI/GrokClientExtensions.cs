@@ -31,4 +31,8 @@ public static class GrokClientExtensions
     /// <summary>Creates a new <see cref="ISpeechToTextClient"/> from the specified <see cref="GrokClient"/>.</summary>
     public static ISpeechToTextClient AsISpeechToTextClient(this GrokClient client)
         => new GrokSpeechToTextClient(client.HttpHandler, client.Options, client.ApiKey);
+
+    /// <summary>Creates a new <see cref="IRealtimeClient"/> from the specified <see cref="GrokClient"/>.</summary>
+    public static IRealtimeClient AsIRealtimeClient(this GrokClient client)
+        => new GrokRealtimeClient(client.HttpHandler, client.Options.Endpoint, client.ApiKey);
 }

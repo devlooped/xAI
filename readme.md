@@ -64,7 +64,45 @@ var transcription = new GrokClient(Environment.GetEnvironmentVariable("XAI_API_K
 
 var text = await transcription.GetTextAsync(File.OpenRead("audio.mp3"),
     new SpeechToTextOptions { TextLanguage = "en" });
+
+var realtime = new GrokClient(Environment.GetEnvironmentVariable("XAI_API_KEY")!)
+    .AsIRealtimeClient();
+
+await using var session = await realtime.CreateSessionAsync(new GrokRealtimeOptions
+{
+    Voice = "eve",
+    Instructions = "You are a helpful voice assistant.",
+    InputAudioFormat = new RealtimeAudioFormat("audio/pcm", 24000),
+    OutputAudioFormat = new RealtimeAudioFormat("audio/pcm", 24000),
+    VoiceActivityDetection = new VoiceActivityDetectionOptions { Enabled = true },
+});
+
+await session.SendAsync(new InputAudioBufferAppendRealtimeClientMessage(
+    new DataContent(File.ReadAllBytes("speech.pcm"), "audio/pcm")));
+await foreach (var update in session.GetStreamingResponseAsync())
+{
+    if (update is OutputTextAudioRealtimeServerMessage { Audio: { } audio })
+        Console.WriteLine(audio); // Base64 audio delta
+}
 ```
+
+`IRealtimeClient` provides xAI's bidirectional speech-to-speech WebSocket through
+MEAI 10.10.1's experimental realtime API. The inherited `RealtimeSessionOptions.Voice`
+can be a built-in voice or custom voice ID; `GrokRealtimeOptions.CustomVoiceId` is
+available when the distinction is useful. For client-side connections, request a
+short-lived token from a trusted server with `GrokRealtimeClient.CreateEphemeralTokenAsync`
+and pass it in `GrokRealtimeOptions.EphemeralToken` rather than exposing an API key.
+Custom functions, web/X search, collection file search, and hosted MCP tools in
+`RealtimeSessionOptions.Tools` are mapped to xAI's documented session tools. Real-time
+audio currently uses xAI's JSON/base64 transport; unsupported MEAI message/options are
+rejected explicitly, and unknown server events retain their raw JSON representation.
+
+STT streaming interim events are replaceable snapshots, so their text is available as
+`AdditionalProperties["partial_text"]` and is intentionally excluded from MEAI response
+contents. Final transcript updates remain append-only and can safely be aggregated
+with `ToSpeechToTextResponse()` / `ToSpeechToTextResponseAsync()` without duplicating
+the final `transcript.done` event. A server error is surfaced once as an error update
+and ends that stream.
 
 Use Grok-specific options for xAI's voice parameters. The stable MEAI
 `TextToSpeechOptions.Speed` property controls speed, while timestamps and phrase

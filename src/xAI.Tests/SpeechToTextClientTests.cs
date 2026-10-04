@@ -152,7 +152,8 @@ public class SpeechToTextClientTests
             """{"type":"transcript.created"}""",
             """{"type":"transcript.partial","text":"Hel","is_final":false,"speech_final":false,"start":0.0,"duration":0.4}""",
             """{"type":"transcript.partial","text":"Hello","is_final":true,"speech_final":true,"start":0.0,"duration":0.8,"channel_index":1,"end_of_turn_confidence":0.8}""",
-            """{"type":"transcript.done","text":"Hello world","duration":1.2}""");
+            """{"type":"transcript.done","channel_index":0,"duration":1.2}""",
+            """{"type":"transcript.done","text":"Hello world","duration":1.2,"channel_index":1}""");
 
         Uri? capturedUri = null;
         string? capturedApiKey = null;
@@ -213,7 +214,8 @@ public class SpeechToTextClientTests
             {
                 Assert.Equal(SpeechToTextResponseUpdateKind.TextUpdating, update.Kind);
                 Assert.Null(update.ModelId);
-                Assert.Equal("Hel", update.Text);
+                Assert.Equal("", update.Text);
+                Assert.Equal("Hel", update.AdditionalProperties?["partial_text"]);
                 Assert.Equal(TimeSpan.Zero, update.StartTime);
                 Assert.Equal(TimeSpan.FromSeconds(0.4), update.EndTime);
             },
@@ -229,7 +231,7 @@ public class SpeechToTextClientTests
             {
                 Assert.Equal(SpeechToTextResponseUpdateKind.TextUpdated, update.Kind);
                 Assert.Null(update.ModelId);
-                Assert.Equal("Hello world", update.Text);
+                Assert.Equal(" world", update.Text);
             },
             update =>
             {
@@ -237,6 +239,7 @@ public class SpeechToTextClientTests
                 Assert.Null(update.ModelId);
             });
 
+        Assert.Equal("Hello world", updates.ToSpeechToTextResponse().Text);
     }
 
     [Fact]
@@ -260,6 +263,39 @@ public class SpeechToTextClientTests
         }
 
         Assert.Contains(updates, update => update.Kind == SpeechToTextResponseUpdateKind.Error && update.Text == "bad audio");
+        Assert.DoesNotContain(updates, update => update.Kind == SpeechToTextResponseUpdateKind.SessionClose);
+        Assert.Equal(2, webSocket.ReceiveCount);
+    }
+
+    [Fact]
+    public async Task GetStreamingTextAsync_WithMultichannelDone_ClosesAfterAllChannelsAndDoesNotRepeatFinalText()
+    {
+        var webSocket = new FakeWebSocket(
+            """{"type":"transcript.created"}""",
+            """{"type":"transcript.partial","text":"Left","is_final":true,"speech_final":true,"channel_index":0}""",
+            """{"type":"transcript.partial","text":"Right","is_final":true,"speech_final":true,"channel_index":1}""",
+            """{"type":"transcript.done","text":"Left","channel_index":0}""",
+            """{"type":"transcript.done","text":"Right","channel_index":1}""");
+
+        using var stt = new GrokSpeechToTextClient(
+            new HttpClient(new CaptureHandler()),
+            new Uri("https://streaming.test/"),
+            "test-api-key",
+            (_, _, _) => ValueTask.FromResult<WebSocket>(webSocket));
+
+        var updates = new List<SpeechToTextResponseUpdate>();
+        await foreach (var update in stt.GetStreamingTextAsync(new MemoryStream([1]), new GrokSpeechToTextOptions
+        {
+            Multichannel = true,
+            Channels = 2,
+        }))
+        {
+            updates.Add(update);
+        }
+
+        Assert.Equal("LeftRight", updates.ToSpeechToTextResponse().Text);
+        Assert.Single(updates, update => update.Kind == SpeechToTextResponseUpdateKind.SessionClose);
+        Assert.Equal(5, webSocket.ReceiveCount);
     }
 
     [Fact]
@@ -341,6 +377,7 @@ public class SpeechToTextClientTests
 
         public List<string> SentTextMessages { get; } = [];
         public List<byte[]> SentBinaryMessages { get; } = [];
+        public int ReceiveCount { get; private set; }
 
         public override WebSocketCloseStatus? CloseStatus => closeStatus;
 
@@ -367,6 +404,7 @@ public class SpeechToTextClientTests
 
         public override Task<WebSocketReceiveResult> ReceiveAsync(ArraySegment<byte> buffer, CancellationToken cancellationToken)
         {
+            ReceiveCount++;
             if (messages.Count == 0)
             {
                 state = WebSocketState.CloseReceived;
