@@ -35,6 +35,8 @@ jobs:
 
       - name: 🧪 test
         shell: pwsh
+        env:
+          CI_XAI_API_KEY: ${{ secrets.CI_XAI_API_KEY }}
         run: dnx --yes retest -- --no-build
 
       - name: 🐛 logs

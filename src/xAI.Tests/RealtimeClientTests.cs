@@ -4,10 +4,11 @@ using System.Text;
 using System.Text.Json;
 using Grpc.Net.Client;
 using Microsoft.Extensions.AI;
+using static ConfigurationExtensions;
 
 namespace xAI.Tests;
 
-public class RealtimeClientTests
+public class RealtimeClientTests(ITestOutputHelper output)
 {
     [Fact]
     public async Task CreateSessionAsync_UsesRealtimeEndpointAndMapsOptionsAndMessages()
@@ -145,6 +146,47 @@ public class RealtimeClientTests
         Assert.Equal(new Uri("https://realtime.test/root/v1/realtime/client_secrets"), handler.Request.RequestUri);
         using var body = JsonDocument.Parse(handler.RequestBody!);
         Assert.Equal(300, body.RootElement.GetProperty("expires_after").GetProperty("seconds").GetInt32());
+    }
+
+    [SecretsFact("CI_XAI_API_KEY")]
+    public async Task CreateSessionAsync_WithTextTurn_ReturnsAssistantOutput()
+    {
+        using var client = new GrokClient(Configuration["CI_XAI_API_KEY"]!);
+        using var realtime = client.AsIRealtimeClient();
+
+        await using var session = await realtime.CreateSessionAsync(new GrokRealtimeOptions
+        {
+            Voice = "eve",
+            Instructions = "Reply with a short spoken greeting.",
+            VoiceActivityDetection = new VoiceActivityDetectionOptions { Enabled = false },
+        });
+
+        await session.SendAsync(new CreateConversationItemRealtimeClientMessage(
+            new RealtimeConversationItem([new TextContent("Say hello.")], role: ChatRole.User)));
+        await session.SendAsync(new CreateResponseRealtimeClientMessage());
+
+        using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(2));
+        var sawAssistantOutput = false;
+        await foreach (var message in session.GetStreamingResponseAsync(timeout.Token))
+        {
+            output.WriteLine(message.Type.ToString());
+            if (message is ErrorRealtimeServerMessage error)
+                throw new InvalidOperationException(error.Error?.Message ?? "xAI realtime server error.");
+
+            if (message is OutputTextAudioRealtimeServerMessage outputMessage &&
+                (outputMessage.Text is { Length: > 0 } || outputMessage.Audio is { Length: > 0 }))
+            {
+                sawAssistantOutput = true;
+            }
+
+            if (message.Type == RealtimeServerMessageType.ResponseDone)
+            {
+                Assert.True(sawAssistantOutput, "Expected assistant text or audio before the realtime response completed.");
+                return;
+            }
+        }
+
+        Assert.Fail("Realtime session closed before response.done.");
     }
 
     [Fact]
