@@ -11,6 +11,29 @@ namespace xAI.Tests;
 public class TextToSpeechClientTests
 {
     [Fact]
+    public void VoiceWebSocketAuthorizationHeader_UsesBearerApiKey()
+    {
+        var headers = new Dictionary<string, string>();
+
+        GrokVoiceWebSocket.SetAuthorizationHeader("test-api-key", (name, value) => headers[name] = value);
+
+        Assert.Equal(string.Concat("Bear", "er ", "test-api-key"), headers["Authorization"]);
+        Assert.Single(headers);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    public void VoiceWebSocketAuthorizationHeader_OmitsMissingApiKey(string? apiKey)
+    {
+        var headers = new Dictionary<string, string>();
+
+        GrokVoiceWebSocket.SetAuthorizationHeader(apiKey, (name, value) => headers[name] = value);
+
+        Assert.Empty(headers);
+    }
+
+    [Fact]
     public void AsITextToSpeechClient_ReturnsMetadata()
     {
         using var client = new GrokClient("test-api-key", CreateOptions(new CaptureHandler()));
@@ -52,6 +75,8 @@ public class TextToSpeechClientTests
                 BitRate = 192000,
                 OptimizeStreamingLatency = 1,
                 TextNormalization = true,
+                Speed = 1.2f,
+                Replace = new Dictionary<string, string> { ["Acme Mobile"] = "Acme Mobull" },
                 ModelId = "test-model",
             });
 
@@ -67,6 +92,8 @@ public class TextToSpeechClientTests
         Assert.Equal("pt-BR", root.GetProperty("language").GetString());
         Assert.Equal(1, root.GetProperty("optimize_streaming_latency").GetInt32());
         Assert.True(root.GetProperty("text_normalization").GetBoolean());
+        Assert.Equal(1.2, root.GetProperty("speed").GetDouble());
+        Assert.Equal("Acme Mobull", root.GetProperty("replace").GetProperty("Acme Mobile").GetString());
 
         var outputFormat = root.GetProperty("output_format");
         Assert.Equal("wav", outputFormat.GetProperty("codec").GetString());
@@ -125,6 +152,39 @@ public class TextToSpeechClientTests
     }
 
     [Fact]
+    public async Task GetAudioAsync_WithTimestamps_MapsAudioAndCharacterTimings()
+    {
+        var handler = new CaptureHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(
+                """
+                {
+                  "audio": "AQID",
+                  "audio_duration": 1.2,
+                  "audio_timestamps": {
+                    "graph_chars": ["H", "i"],
+                    "graph_times": [[0.0, 0.4], [0.4, 0.8]]
+                  }
+                }
+                """, Encoding.UTF8, "application/json"),
+        });
+
+        using var client = new GrokClient("test-api-key", CreateOptions(handler));
+        using var tts = client.AsITextToSpeechClient();
+
+        var response = await tts.GetAudioAsync("Hi", new GrokTextToSpeechOptions { WithTimestamps = true });
+
+        var audio = Assert.IsType<DataContent>(Assert.Single(response.Contents));
+        Assert.Equal(new byte[] { 1, 2, 3 }, audio.Data.ToArray());
+        Assert.Equal(1.2, response.AdditionalProperties?["audio_duration"]);
+        var timestamps = Assert.IsType<JsonElement>(response.AdditionalProperties?["audio_timestamps"]);
+        Assert.Equal("H", timestamps.GetProperty("graph_chars")[0].GetString());
+
+        using var request = JsonDocument.Parse(handler.RequestBody!);
+        Assert.True(request.RootElement.GetProperty("with_timestamps").GetBoolean());
+    }
+
+    [Fact]
     public async Task GetAudioAsync_WithError_ThrowsHttpRequestException()
     {
         var handler = new CaptureHandler(_ => new HttpResponseMessage(HttpStatusCode.BadRequest)
@@ -155,7 +215,8 @@ public class TextToSpeechClientTests
     public async Task GetStreamingAudioAsync_MapsWebSocketEvents()
     {
         var webSocket = new FakeWebSocket(
-            """{"type":"audio.delta","delta":"AQID"}""",
+            """{"type":"session.updated"}""",
+            """{"type":"audio.delta","delta":"AQID","audio_duration":0.5,"audio_timestamps":{"graph_chars":["H"],"graph_times":[[0.0,0.5]]}}""",
             """{"type":"audio.done","trace_id":"trace-123"}""");
 
         Uri? capturedUri = null;
@@ -181,6 +242,9 @@ public class TextToSpeechClientTests
                 SampleRate = 8000,
                 OptimizeStreamingLatency = 1,
                 TextNormalization = true,
+                Speed = 1.2f,
+                WithTimestamps = true,
+                Replace = new Dictionary<string, string> { ["Acme"] = "Ack-me" },
                 ModelId = "ignored-model",
             }))
         {
@@ -188,9 +252,15 @@ public class TextToSpeechClientTests
         }
 
         Assert.Equal("test-api-key", capturedApiKey);
-        Assert.Equal("wss://streaming.test/base/v1/tts?voice=ara&language=auto&codec=mulaw&sample_rate=8000&optimize_streaming_latency=1&text_normalization=true", capturedUri!.ToString());
+        Assert.Equal("wss://streaming.test/base/v1/tts?voice=ara&language=auto&codec=mulaw&sample_rate=8000&optimize_streaming_latency=1&text_normalization=true&speed=1.2&with_timestamps=true", capturedUri!.AbsoluteUri);
 
         Assert.Collection(webSocket.SentMessages,
+            message =>
+            {
+                using var json = JsonDocument.Parse(message);
+                Assert.Equal("session.update", json.RootElement.GetProperty("type").GetString());
+                Assert.Equal("Ack-me", json.RootElement.GetProperty("replace").GetProperty("Acme").GetString());
+            },
             message =>
             {
                 using var json = JsonDocument.Parse(message);
@@ -211,6 +281,7 @@ public class TextToSpeechClientTests
                 var data = Assert.IsType<DataContent>(Assert.Single(update.Contents));
                 Assert.Equal(new byte[] { 1, 2, 3 }, data.Data.ToArray());
                 Assert.Equal("audio/basic", data.MediaType);
+                Assert.Equal(0.5, update.AdditionalProperties?["audio_duration"]);
             },
             update =>
             {
@@ -218,6 +289,10 @@ public class TextToSpeechClientTests
                 Assert.Null(update.ModelId);
                 Assert.Equal("trace-123", update.AdditionalProperties?["trace_id"]);
             });
+
+        var aggregated = updates.ToTextToSpeechResponse();
+        var aggregatedAudio = Assert.IsType<DataContent>(Assert.Single(aggregated.Contents));
+        Assert.Equal(new byte[] { 1, 2, 3 }, aggregatedAudio.Data.ToArray());
     }
 
     [Fact]

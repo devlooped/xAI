@@ -68,6 +68,19 @@ public static class ProtocolServiceCollectionExtensions
 
         configureHttp?.Invoke(builder);
 
+        builder = services.AddGrpcClient<Files.FilesClient>(options =>
+        {
+            options.Address = address;
+            configureClient?.Invoke(options);
+        })
+        .AddCallCredentials((context, metadata) =>
+        {
+            metadata.Add("Authorization", $"******");
+            return Task.CompletedTask;
+        });
+
+        configureHttp?.Invoke(builder);
+
         builder = services.AddGrpcClient<Models.ModelsClient>(options =>
         {
             options.Address = address;
@@ -115,6 +128,19 @@ public static class ProtocolServiceCollectionExtensions
         .AddCallCredentials((context, metadata) =>
         {
             metadata.Add("Authorization", $"Bearer {apiKey}");
+            return Task.CompletedTask;
+        });
+
+        configureHttp?.Invoke(builder);
+
+        builder = services.AddGrpcClient<Video.VideoClient>(options =>
+        {
+            options.Address = address;
+            configureClient?.Invoke(options);
+        })
+        .AddCallCredentials((context, metadata) =>
+        {
+            metadata.Add("Authorization", $"******");
             return Task.CompletedTask;
         });
 

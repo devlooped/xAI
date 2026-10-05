@@ -220,6 +220,40 @@ public class GrokConversionTests
     }
 
     [Fact]
+    public void AsContents_InProgressFunctionCall_PreservesRawFragmentWithoutParsingPartialJson()
+    {
+        var toolCall = new ToolCall
+        {
+            Id = "call_1",
+            Type = ToolCallType.ClientSideTool,
+            Index = 0,
+            Function = new FunctionCall
+            {
+                Name = "lookup_weather",
+                Arguments = """{"city":""",
+            },
+        };
+
+        var content = Assert.IsType<FunctionCallContent>(Assert.Single(new[] { toolCall }.AsContents()));
+
+        Assert.Equal("call_1", content.CallId);
+        Assert.Equal("lookup_weather", content.Name);
+        Assert.Null(content.Arguments);
+        Assert.Same(toolCall, content.RawRepresentation);
+    }
+
+    [Fact]
+    public void AsCompletionsRequest_ToolCallStreamingInclude_IsPassedThrough()
+    {
+        var request = CreateClient().AsCompletionsRequest([], new GrokChatOptions
+        {
+            Include = { IncludeOption.ToolCallStreaming },
+        });
+
+        Assert.Contains(IncludeOption.ToolCallStreaming, request.Include);
+    }
+
+    [Fact]
     public void AsTool_WithCodeExecution()
     {
         var codeTool = new HostedCodeInterpreterTool();
@@ -227,6 +261,20 @@ public class GrokConversionTests
         var tool = codeTool.AsProtocolTool();
 
         Assert.NotNull(tool?.CodeExecution);
+    }
+
+    [Fact]
+    public void AsTool_WithImageGeneration()
+    {
+        var tool = new HostedImageGenerationTool(new Dictionary<string, object?>
+        {
+            ["action"] = "generate",
+        });
+
+        var protocolTool = tool.AsProtocolTool();
+
+        Assert.NotNull(protocolTool?.ImageGeneration);
+        Assert.Equal("generate", protocolTool.ImageGeneration.Action);
     }
 
     [Fact]
@@ -383,6 +431,18 @@ public class GrokConversionTests
     }
 
     [Fact]
+    public void AsCompletionsRequest_SafetyIdentifier_MapsWithoutChangingEndUserId()
+    {
+        var request = CreateClient().AsCompletionsRequest([], new GrokChatOptions
+        {
+            SafetyIdentifier = "hashed-user-123",
+        });
+
+        Assert.Equal("hashed-user-123", request.SafetyIdentifier);
+        Assert.Empty(request.User);
+    }
+
+    [Fact]
     public void AsTool_WithWebSearch_EnableImageSearch()
     {
         var tool = new GrokSearchTool { EnableImageSearch = true }.AsProtocolTool();
@@ -430,6 +490,39 @@ public class GrokConversionTests
     }
 
     [Fact]
+    public void AsContents_ImageGenerationTool_MapsCallResultAndFailure()
+    {
+        var toolCall = new ToolCall
+        {
+            Id = "image_1",
+            Type = ToolCallType.ImageGenerationTool,
+            Status = ToolCallStatus.Completed,
+            Function = new FunctionCall
+            {
+                Name = "image_generation",
+                Arguments = """{"prompt":"a red fox"}""",
+            },
+        };
+
+        var contents = new[] { toolCall }.AsContents("generated image result").ToList();
+
+        var call = Assert.IsType<ImageGenerationToolCallContent>(Assert.Single(contents.OfType<ImageGenerationToolCallContent>()));
+        Assert.Equal("image_1", call.CallId);
+        Assert.Same(toolCall, call.RawRepresentation);
+
+        var result = Assert.IsType<ImageGenerationToolResultContent>(Assert.Single(contents.OfType<ImageGenerationToolResultContent>()));
+        Assert.Equal("image_1", result.CallId);
+        Assert.Same(toolCall, result.RawRepresentation);
+        Assert.Equal("generated image result", Assert.IsType<TextContent>(Assert.Single(result.Outputs!)).Text);
+
+        toolCall.Status = ToolCallStatus.Failed;
+        toolCall.ErrorMessage = "generation failed";
+
+        var failed = Assert.Single(new[] { toolCall }.AsContents().OfType<ImageGenerationToolResultContent>());
+        Assert.Equal("generation failed", Assert.IsType<TextContent>(Assert.Single(failed.Outputs!)).Text);
+    }
+
+    [Fact]
     public void Convert_SamplingUsage_MapsExtendedTokenCounts()
     {
         var usage = new SamplingUsage
@@ -467,6 +560,6 @@ public class GrokConversionTests
         Assert.Equal(Protocol.ReasoningEffort.EffortLow, Microsoft.Extensions.AI.ReasoningEffort.Low.Convert());
         Assert.Equal(Protocol.ReasoningEffort.EffortMedium, Microsoft.Extensions.AI.ReasoningEffort.Medium.Convert());
         Assert.Equal(Protocol.ReasoningEffort.EffortHigh, Microsoft.Extensions.AI.ReasoningEffort.High.Convert());
-        Assert.Equal(Protocol.ReasoningEffort.EffortHigh, Microsoft.Extensions.AI.ReasoningEffort.ExtraHigh.Convert());
+        Assert.Equal(Protocol.ReasoningEffort.EffortXhigh, Microsoft.Extensions.AI.ReasoningEffort.ExtraHigh.Convert());
     }
 }

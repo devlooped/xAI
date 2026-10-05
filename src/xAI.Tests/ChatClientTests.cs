@@ -14,6 +14,18 @@ namespace xAI.Tests;
 
 public class ChatClientTests(ITestOutputHelper output)
 {
+    [Fact]
+    public void GrokClientExposesFilesAndVideoProtocolClients()
+    {
+        using var client = new GrokClient("test-api-key")
+        {
+            Endpoint = new Uri($"http://localhost/{Guid.NewGuid():N}/"),
+        };
+
+        Assert.IsType<Files.FilesClient>(client.GetFilesClient());
+        Assert.IsType<Video.VideoClient>(client.GetVideoClient());
+    }
+
     [SecretsFact("OPENAI_API_KEY")]
     public async Task OpenAIInvokesTools()
     {

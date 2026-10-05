@@ -64,7 +64,67 @@ var transcription = new GrokClient(Environment.GetEnvironmentVariable("XAI_API_K
 
 var text = await transcription.GetTextAsync(File.OpenRead("audio.mp3"),
     new SpeechToTextOptions { TextLanguage = "en" });
+
+var realtime = new GrokClient(Environment.GetEnvironmentVariable("XAI_API_KEY")!)
+    .AsIRealtimeClient();
+
+await using var session = await realtime.CreateSessionAsync(new GrokRealtimeOptions
+{
+    Voice = "eve",
+    Instructions = "You are a helpful voice assistant.",
+    InputAudioFormat = new RealtimeAudioFormat("audio/pcm", 24000),
+    OutputAudioFormat = new RealtimeAudioFormat("audio/pcm", 24000),
+    VoiceActivityDetection = new VoiceActivityDetectionOptions { Enabled = true },
+});
+
+await session.SendAsync(new InputAudioBufferAppendRealtimeClientMessage(
+    new DataContent(File.ReadAllBytes("speech.pcm"), "audio/pcm")));
+await foreach (var update in session.GetStreamingResponseAsync())
+{
+    if (update is OutputTextAudioRealtimeServerMessage { Audio: { } audio })
+        Console.WriteLine(audio); // Base64 audio delta
+}
 ```
+
+`IRealtimeClient` provides xAI's bidirectional speech-to-speech WebSocket through
+MEAI 10.10.1's experimental realtime API. The inherited `RealtimeSessionOptions.Voice`
+can be a built-in voice or custom voice ID; `GrokRealtimeOptions.CustomVoiceId` is
+available when the distinction is useful. For client-side connections, request a
+short-lived token from a trusted server with `GrokRealtimeClient.CreateEphemeralTokenAsync`
+and pass it in `GrokRealtimeOptions.EphemeralToken` rather than exposing an API key.
+Custom functions, web/X search, collection file search, and hosted MCP tools in
+`RealtimeSessionOptions.Tools` are mapped to xAI's documented session tools. Real-time
+audio currently uses xAI's JSON/base64 transport; unsupported MEAI message/options are
+rejected explicitly, and unknown server events retain their raw JSON representation.
+
+STT streaming interim events are replaceable snapshots, so their text is available as
+`AdditionalProperties["partial_text"]` and is intentionally excluded from MEAI response
+contents. Final transcript updates remain append-only and can safely be aggregated
+with `ToSpeechToTextResponse()` / `ToSpeechToTextResponseAsync()` without duplicating
+the final `transcript.done` event. A server error is surfaced once as an error update
+and ends that stream.
+
+Use Grok-specific options for xAI's voice parameters. The stable MEAI
+`TextToSpeechOptions.Speed` property controls speed, while timestamps and phrase
+replacements are available through `GrokTextToSpeechOptions`:
+
+```csharp
+var audio = await speech.GetAudioAsync("Welcome to Acme Mobile.",
+    new GrokTextToSpeechOptions
+    {
+        Speed = 1.2f,
+        WithTimestamps = true,
+        Replace = new Dictionary<string, string> { ["Acme Mobile"] = "Acme Mobull" },
+    });
+
+var characterTimings = (JsonElement)audio.AdditionalProperties!["audio_timestamps"]!;
+```
+
+`audio_duration` and `audio_timestamps` are also included in streaming audio
+updates when requested. For transcription, `GrokSpeechToTextOptions` exposes
+`KeyTerms`, `FillerWords`, `VadThreshold`, and (for streaming) `SmartTurn` and
+`SmartTurnTimeout`. Raw Opus packet streaming is not supported by the current
+stream API because it does not preserve packet boundaries.
 
 ## File Attachments
 
@@ -165,6 +225,34 @@ var response = await grok.GetResponseAsync(
 Learn more about available filters at [X search parameters](https://docs.x.ai/docs/guides/tools/search-tools#x-search-parameters).
 
 You can combine both web and X search in the same request by adding both tools.
+
+## Image Generation Tool
+
+Grok can generate or edit images as part of a chat response using MEAI's
+`HostedImageGenerationTool`:
+
+```csharp
+var response = await grok.GetResponseAsync(
+    "Create a poster of a red fox in a snowy forest.",
+    new ChatOptions { Tools = [new HostedImageGenerationTool()] });
+
+var calls = response.Messages.SelectMany(x => x.Contents)
+    .OfType<ImageGenerationToolCallContent>();
+```
+
+By default, the model may generate or edit images. Use the xAI-specific `action`
+additional property to restrict the tool to generation or editing:
+
+```csharp
+var imageTool = new HostedImageGenerationTool(new Dictionary<string, object>
+{
+    ["action"] = "generate", // auto | generate | edit
+});
+```
+
+The adapter surfaces `ImageGenerationToolCallContent` and
+`ImageGenerationToolResultContent`; inspect each result's `Outputs` or raw
+protocol representation for provider-returned output details.
 
 ## Code Execution
 
@@ -308,6 +396,22 @@ var options = new GrokChatOptions
 
 Learn more about [Remote MCP tools](https://docs.x.ai/docs/guides/tools/remote-mcp-tools).
 
+For experimental incremental client-side tool calls, add
+`xAI.Protocol.IncludeOption.ToolCallStreaming` to `GrokChatOptions.Include`.
+Intermediate updates expose each raw fragment (including its call index);
+completed updates contain the full function name and arguments. xAI currently
+documents this mode as unsupported with server-side tools.
+
+For abuse attribution, set `SafetyIdentifier` to a stable hashed identifier
+instead of sending an email address, name, or other personal information:
+
+```csharp
+var options = new GrokChatOptions
+{
+    SafetyIdentifier = hashedInternalUserId,
+};
+```
+
 ## Image Generation
 
 Grok also supports image generation using the `IImageGenerator` abstraction from 
@@ -333,8 +437,8 @@ Console.WriteLine($"Generated image URL: {image.Uri}");
 
 ### Grok-Specific Options
 
-Use `GrokImageGenerationOptions` to control aspect ratio and resolution — features 
-unique to grok-imagine models:
+Use `GrokImageGenerationOptions` to control quality, aspect ratio, and resolution
+or store outputs in the Files API:
 
 ```csharp
 var imageGenerator = new GrokClient(Environment.GetEnvironmentVariable("XAI_API_KEY")!)
@@ -346,15 +450,27 @@ var options = new GrokImageGenerationOptions
     ResponseFormat = ImageGenerationResponseFormat.Uri,
     AspectRatio = ImageAspectRatio.ImgAspectRatio16_9,
     Resolution = ImageResolution.ImgResolution2K,
+    Quality = ImageQuality.ImgQualityHigh,
+    Storage = new GrokImageStorageOptions
+    {
+        Filename = "city.png",
+        CreatePublicUrl = true,
+    },
 };
 
 var response = await imageGenerator.GenerateAsync(request, options);
 var image = (UriContent)response.Contents.First();
 Console.WriteLine($"Generated image URL: {image.Uri}");
+var file = (xAI.Protocol.FileOutput)image.AdditionalProperties!["file_output"]!;
 ```
 
 Aspect ratio defaults to 1:1 and resolution defaults to 1k when not specified.
-2k output is generated at 1k and then upscaled with super-resolution.
+Quality defaults to medium. 2k output is generated at 1k and then upscaled with
+super-resolution. Per-image `AdditionalProperties` includes `file_output` when
+storage succeeds, `storage_error` when upload fails, and `respect_moderation`.
+`GrokImageStorageOptions.ExpiresAfterSeconds` sets file expiry; set
+`PublicUrlExpiresAfterSeconds` to create an expiring public URL, or
+`CreatePublicUrl = true` for a non-expiring URL.
 
 ### Editing Images
 
@@ -592,6 +708,11 @@ class MyService(Chat.ChatClient chat, Documents.DocumentsClient docs, Embedder.E
     // use clients
 }
 ```
+
+The generated `Files` and `Video` gRPC clients are available through
+`GrokClient.GetFilesClient()` / `GetVideoClient()` or dependency injection
+(`Files.FilesClient` and `Video.VideoClient`). These expose the upstream protocol
+directly; no higher-level MEAI file or video abstraction is implied.
 
 ## Auto-updating
 

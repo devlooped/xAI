@@ -63,6 +63,18 @@ partial class GrokTextToSpeechClient : ITextToSpeechClient
 
         var audio = await response.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false);
         var mediaType = response.Content.Headers.ContentType?.MediaType ?? GetMediaType(request.OutputFormat?.Codec);
+        AdditionalPropertiesDictionary? additionalProperties = null;
+
+        if (request.WithTimestamps == true)
+        {
+            using var json = JsonDocument.Parse(audio);
+            var root = json.RootElement;
+            var encodedAudio = root.GetProperty("audio").GetString()
+                ?? throw new InvalidOperationException("xAI TTS timestamp response did not contain audio data.");
+            audio = Convert.FromBase64String(encodedAudio);
+            additionalProperties = CreateTimestampProperties(root);
+            mediaType = GetMediaType(request.OutputFormat?.Codec);
+        }
 
         var raw = new HttpResponseMessage(response.StatusCode);
         foreach (var header in response.Headers)
@@ -73,6 +85,7 @@ partial class GrokTextToSpeechClient : ITextToSpeechClient
         return new TextToSpeechResponse([new DataContent(audio, mediaType)])
         {
             RawRepresentation = raw,
+            AdditionalProperties = additionalProperties,
         };
     }
 
@@ -84,6 +97,9 @@ partial class GrokTextToSpeechClient : ITextToSpeechClient
     {
         var request = CreateRequest(Throw.IfNull(text), options);
         using var webSocket = await webSocketFactory(GetStreamingEndpoint(request), apiKey, cancellationToken).ConfigureAwait(false);
+
+        if (request.Replace is { Count: > 0 } replacements)
+            await SendJsonAsync(webSocket, new SessionUpdateMessage(replacements), JsonContext.Default.SessionUpdateMessage, cancellationToken).ConfigureAwait(false);
 
         await SendJsonAsync(webSocket, new TextDeltaMessage(text), JsonContext.Default.TextDeltaMessage, cancellationToken).ConfigureAwait(false);
         await SendJsonAsync(webSocket, TextDoneMessage.Instance, JsonContext.Default.TextDoneMessage, cancellationToken).ConfigureAwait(false);
@@ -104,7 +120,11 @@ partial class GrokTextToSpeechClient : ITextToSpeechClient
                         Kind = TextToSpeechResponseUpdateKind.AudioUpdating,
                         Contents = [new DataContent(audio, GetMediaType(request.OutputFormat?.Codec))],
                         RawRepresentation = rawRepresentation,
+                        AdditionalProperties = CreateTimestampProperties(root),
                     };
+                    break;
+
+                case "session.updated":
                     break;
 
                 case "audio.done":
@@ -164,7 +184,10 @@ partial class GrokTextToSpeechClient : ITextToSpeechClient
             options?.Language ?? DefaultLanguage,
             outputFormat,
             grokOptions?.OptimizeStreamingLatency,
-            grokOptions?.TextNormalization);
+            grokOptions?.TextNormalization,
+            options?.Speed,
+            grokOptions?.WithTimestamps,
+            grokOptions?.Replace);
     }
 
     Uri GetHttpEndpoint() => GetEndpoint(endpoint, "https", "v1/tts", null);
@@ -189,6 +212,12 @@ partial class GrokTextToSpeechClient : ITextToSpeechClient
 
         if (request.TextNormalization is bool textNormalization)
             query["text_normalization"] = textNormalization ? "true" : "false";
+
+        if (request.Speed is float speed)
+            query["speed"] = speed.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+        if (request.WithTimestamps is bool withTimestamps)
+            query["with_timestamps"] = withTimestamps ? "true" : "false";
 
         return GetEndpoint(endpoint, endpoint.Scheme == Uri.UriSchemeHttp ? "ws" : "wss", "v1/tts", query);
     }
@@ -227,6 +256,19 @@ partial class GrokTextToSpeechClient : ITextToSpeechClient
         return builder.ToString();
     }
 
+    static AdditionalPropertiesDictionary? CreateTimestampProperties(JsonElement root)
+    {
+        AdditionalPropertiesDictionary? properties = null;
+
+        if (root.TryGetProperty("audio_timestamps", out var timestamps))
+            (properties ??= [])["audio_timestamps"] = timestamps.Clone();
+
+        if (root.TryGetProperty("audio_duration", out var duration) && duration.ValueKind == JsonValueKind.Number)
+            (properties ??= [])["audio_duration"] = duration.GetDouble();
+
+        return properties;
+    }
+
     static string GetCodec(string? format) => format?.ToUpperInvariant() switch
     {
         null or "" => DefaultCodec,
@@ -262,8 +304,7 @@ partial class GrokTextToSpeechClient : ITextToSpeechClient
     {
         var webSocket = new ClientWebSocket();
 
-        if (!string.IsNullOrEmpty(apiKey))
-            webSocket.Options.SetRequestHeader("Authorization", $"Bearer {apiKey}");
+        GrokVoiceWebSocket.SetAuthorizationHeader(apiKey, webSocket.Options.SetRequestHeader);
 
         await webSocket.ConnectAsync(uri, cancellationToken).ConfigureAwait(false);
         return webSocket;
@@ -319,10 +360,12 @@ partial class GrokTextToSpeechClient : ITextToSpeechClient
     [JsonSerializable(typeof(GrokTextToSpeechRequest))]
     [JsonSerializable(typeof(TextDeltaMessage))]
     [JsonSerializable(typeof(TextDoneMessage))]
+    [JsonSerializable(typeof(SessionUpdateMessage))]
     partial class JsonContext : JsonSerializerContext { }
 
     sealed record GrokTextToSpeechRequest(string Text, string VoiceId, string Language,
-        GrokTextToSpeechOutputFormat? OutputFormat, int? OptimizeStreamingLatency, bool? TextNormalization);
+        GrokTextToSpeechOutputFormat? OutputFormat, int? OptimizeStreamingLatency, bool? TextNormalization,
+        float? Speed, bool? WithTimestamps, Dictionary<string, string>? Replace);
 
     sealed record GrokTextToSpeechOutputFormat(string Codec, int? SampleRate, int? BitRate);
 
@@ -336,5 +379,10 @@ partial class GrokTextToSpeechClient : ITextToSpeechClient
         public static readonly TextDoneMessage Instance = new();
 
         public string Type => "text.done";
+    }
+
+    sealed record SessionUpdateMessage(Dictionary<string, string> Replace)
+    {
+        public string Type => "session.update";
     }
 }

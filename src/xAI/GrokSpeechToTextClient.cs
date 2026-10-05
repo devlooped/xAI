@@ -90,6 +90,7 @@ partial class GrokSpeechToTextClient : ISpeechToTextClient
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         _ = Throw.IfNull(audioSpeechStream);
+        var grokOptions = options as GrokSpeechToTextOptions;
 
         using var webSocket = await webSocketFactory(GetStreamingEndpoint(options), apiKey, cancellationToken).ConfigureAwait(false);
 
@@ -112,6 +113,11 @@ partial class GrokSpeechToTextClient : ISpeechToTextClient
         await SendAudioAsync(webSocket, audioSpeechStream, cancellationToken).ConfigureAwait(false);
         await SendJsonAsync(webSocket, AudioDoneMessage.Instance, SpeechToTextJsonContext.Default.AudioDoneMessage, cancellationToken).ConfigureAwait(false);
 
+        var finalizedTextByChannel = new Dictionary<int, string>();
+        var completedChannels = new HashSet<int>();
+        var expectedChannels = grokOptions?.Multichannel == true ? Math.Max(grokOptions.Channels ?? 2, 2) : 1;
+        var anonymousDoneChannel = 0;
+
         while (true)
         {
             using var json = await ReceiveJsonAsync(webSocket, cancellationToken).ConfigureAwait(false);
@@ -122,20 +128,48 @@ partial class GrokSpeechToTextClient : ISpeechToTextClient
             switch (type)
             {
                 case "transcript.partial":
-                    yield return CreateTextUpdate(root, rawRepresentation, options);
-                    break;
+                    {
+                        var channel = TryGetInt(root, "channel_index") ?? 0;
+                        var text = TryGetString(root, "text");
+                        if (GetBoolean(root, "is_final") == true)
+                        {
+                            var delta = MergeFinalText(finalizedTextByChannel, channel, text);
+                            if (delta.Length > 0)
+                                yield return CreateTextUpdate(root, rawRepresentation, options, SpeechToTextResponseUpdateKind.TextUpdated, delta);
+                        }
+                        else
+                        {
+                            // xAI partials are replaceable snapshots, while MEAI's aggregation helper
+                            // appends every update's contents. Keep the preview out of Contents so
+                            // ToSpeechToTextResponseAsync only receives stable, append-only text.
+                            var update = CreateTextUpdate(root, rawRepresentation, options, SpeechToTextResponseUpdateKind.TextUpdating, null);
+                            if (text is not null)
+                                (update.AdditionalProperties ??= [])["partial_text"] = text;
+                            yield return update;
+                        }
+                        break;
+                    }
 
                 case "transcript.done":
-                    if (TryGetString(root, "text") is { Length: > 0 })
-                        yield return CreateTextUpdate(root, rawRepresentation, options, SpeechToTextResponseUpdateKind.TextUpdated);
-
-                    yield return new SpeechToTextResponseUpdate
                     {
-                        Kind = SpeechToTextResponseUpdateKind.SessionClose,
-                        RawRepresentation = rawRepresentation,
-                        AdditionalProperties = CreateStreamingAdditionalProperties(root),
-                    };
-                    yield break;
+                        var channel = TryGetInt(root, "channel_index") ?? anonymousDoneChannel++;
+                        var delta = MergeFinalText(finalizedTextByChannel, channel, TryGetString(root, "text"));
+                        if (delta.Length > 0)
+                            yield return CreateTextUpdate(root, rawRepresentation, options, SpeechToTextResponseUpdateKind.TextUpdated, delta);
+
+                        completedChannels.Add(channel);
+                        if (completedChannels.Count >= expectedChannels)
+                        {
+                            yield return new SpeechToTextResponseUpdate
+                            {
+                                Kind = SpeechToTextResponseUpdateKind.SessionClose,
+                                RawRepresentation = rawRepresentation,
+                                AdditionalProperties = CreateStreamingAdditionalProperties(root),
+                            };
+                            yield break;
+                        }
+                        break;
+                    }
 
                 case "error":
                     yield return new SpeechToTextResponseUpdate
@@ -144,7 +178,9 @@ partial class GrokSpeechToTextClient : ISpeechToTextClient
                         RawRepresentation = rawRepresentation,
                         Contents = [new TextContent(GetRequiredString(root, "message"))],
                     };
-                    break;
+                    // xAI closes the socket for most server errors. Stop here rather than
+                    // attempting another receive and turning the useful error into a close error.
+                    yield break;
 
                 default:
                     throw new InvalidOperationException($"Unsupported xAI STT streaming event type: {type}");
@@ -197,6 +233,16 @@ partial class GrokSpeechToTextClient : ISpeechToTextClient
         if (grokOptions?.Diarize is bool diarize)
             content.Add(new StringContent(diarize ? "true" : "false"), "diarize");
 
+        if (grokOptions?.KeyTerms is { } keyTerms)
+            foreach (var keyTerm in keyTerms)
+                content.Add(new StringContent(keyTerm), "keyterm");
+
+        if (grokOptions?.FillerWords is bool fillerWords)
+            content.Add(new StringContent(fillerWords ? "true" : "false"), "filler_words");
+
+        if (grokOptions?.VadThreshold is double vadThreshold)
+            content.Add(new StringContent(vadThreshold.ToString(CultureInfo.InvariantCulture)), "vad_threshold");
+
         var filename = GetFilename(audioSpeechStream);
         var streamContent = new StreamContent(audioSpeechStream);
         streamContent.Headers.ContentType = new MediaTypeHeaderValue(GetMediaType(filename));
@@ -221,6 +267,22 @@ partial class GrokSpeechToTextClient : ISpeechToTextClient
 
         if (grokOptions?.Endpointing is int endpointing)
             query["endpointing"] = endpointing.ToString(CultureInfo.InvariantCulture);
+
+        if (grokOptions?.KeyTerms is { } keyTerms)
+            foreach (var keyTerm in keyTerms)
+                query.Add("keyterm", keyTerm);
+
+        if (grokOptions?.FillerWords is bool fillerWords)
+            query["filler_words"] = fillerWords ? "true" : "false";
+
+        if (grokOptions?.VadThreshold is double vadThreshold)
+            query["vad_threshold"] = vadThreshold.ToString(CultureInfo.InvariantCulture);
+
+        if (grokOptions?.SmartTurn is double smartTurn)
+            query["smart_turn"] = smartTurn.ToString(CultureInfo.InvariantCulture);
+
+        if (grokOptions?.SmartTurnTimeout is int smartTurnTimeout)
+            query["smart_turn_timeout"] = smartTurnTimeout.ToString(CultureInfo.InvariantCulture);
 
         if (GetLanguage(options) is { } language)
             query["language"] = language;
@@ -263,13 +325,14 @@ partial class GrokSpeechToTextClient : ISpeechToTextClient
         JsonElement root,
         JsonElement rawRepresentation,
         SpeechToTextOptions? options,
-        SpeechToTextResponseUpdateKind? kind = null)
+        SpeechToTextResponseUpdateKind? kind = null,
+        string? contentText = null)
     {
         var update = new SpeechToTextResponseUpdate
         {
             Kind = kind ?? (GetBoolean(root, "is_final") == true ? SpeechToTextResponseUpdateKind.TextUpdated : SpeechToTextResponseUpdateKind.TextUpdating),
             RawRepresentation = rawRepresentation,
-            Contents = TryGetString(root, "text") is { } text ? [new TextContent(text)] : [],
+            Contents = contentText is { Length: > 0 } text ? [new TextContent(text)] : [],
             AdditionalProperties = CreateStreamingAdditionalProperties(root),
         };
 
@@ -280,6 +343,36 @@ partial class GrokSpeechToTextClient : ISpeechToTextClient
             update.EndTime = TimeSpan.FromSeconds((update.StartTime?.TotalSeconds ?? 0) + duration);
 
         return update;
+    }
+
+    static string MergeFinalText(Dictionary<int, string> finalizedTextByChannel, int channel, string? incomingText)
+    {
+        if (string.IsNullOrEmpty(incomingText))
+            return "";
+
+        finalizedTextByChannel.TryGetValue(channel, out var existing);
+        existing ??= "";
+
+        if (incomingText.StartsWith(existing, StringComparison.Ordinal))
+        {
+            var delta = incomingText[existing.Length..];
+            finalizedTextByChannel[channel] = incomingText;
+            return delta;
+        }
+
+        if (existing.StartsWith(incomingText, StringComparison.Ordinal))
+            return "";
+
+        var overlap = Math.Min(existing.Length, incomingText.Length);
+        while (overlap > 0 &&
+            !existing.AsSpan(existing.Length - overlap).SequenceEqual(incomingText.AsSpan(0, overlap)))
+        {
+            overlap--;
+        }
+
+        var addition = incomingText[overlap..];
+        finalizedTextByChannel[channel] = existing + addition;
+        return addition;
     }
 
     static AdditionalPropertiesDictionary? CreateResponseAdditionalProperties(GrokSpeechToTextResponse transcript)
@@ -302,6 +395,7 @@ partial class GrokSpeechToTextClient : ISpeechToTextClient
         AddProperty(ref properties, "is_final", GetBoolean(root, "is_final"));
         AddProperty(ref properties, "speech_final", GetBoolean(root, "speech_final"));
         AddProperty(ref properties, "duration", TryGetDouble(root, "duration"));
+        AddProperty(ref properties, "end_of_turn_confidence", TryGetDouble(root, "end_of_turn_confidence"));
 
         return properties;
     }
@@ -368,16 +462,16 @@ partial class GrokSpeechToTextClient : ISpeechToTextClient
 
         foreach (string key in query)
         {
-            if (query[key] is not { } value)
-                continue;
+            foreach (var value in query.GetValues(key) ?? [])
+            {
+                if (builder.Length > 0)
+                    builder.Append('&');
 
-            if (builder.Length > 0)
-                builder.Append('&');
-
-            builder
-                .Append(Uri.EscapeDataString(key))
-                .Append('=')
-                .Append(Uri.EscapeDataString(value));
+                builder
+                    .Append(Uri.EscapeDataString(key))
+                    .Append('=')
+                    .Append(Uri.EscapeDataString(value));
+            }
         }
 
         return builder.ToString();
@@ -397,8 +491,7 @@ partial class GrokSpeechToTextClient : ISpeechToTextClient
     {
         var webSocket = new ClientWebSocket();
 
-        if (!string.IsNullOrEmpty(apiKey))
-            webSocket.Options.SetRequestHeader("Authorization", $"Bearer {apiKey}");
+        GrokVoiceWebSocket.SetAuthorizationHeader(apiKey, webSocket.Options.SetRequestHeader);
 
         await webSocket.ConnectAsync(uri, cancellationToken).ConfigureAwait(false);
         return webSocket;
